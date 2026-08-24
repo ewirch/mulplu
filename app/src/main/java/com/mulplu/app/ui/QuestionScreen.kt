@@ -352,7 +352,7 @@ private fun BlinkingCursor(hasText: Boolean) {
 
 /** Flat round-key numeric keypad: 1–9, 0, ⌫, ✓ (mvp-spec §9). */
 @Composable
-private fun Keypad(
+internal fun Keypad(
     enabled: Boolean,
     onDigit: (String) -> Unit,
     onBackspace: () -> Unit,
