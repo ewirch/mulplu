@@ -187,12 +187,17 @@ private fun Rosette() {
     }
 }
 
-/** Triangle with axes 2–9; upper half dashed ghost cells (mvp-spec §10). */
+/**
+ * Triangle with axes 2–9; upper half dashed ghost cells (mvp-spec §10).
+ * With [revealed] non-null (the calibration reveal, mvp-spec §8), items not
+ * yet in the set render as empty tiles and pop in as the set grows.
+ */
 @Composable
-private fun TriangleGrid(
+internal fun TriangleGrid(
     tiles: Map<ItemKey, TileState>,
     promoted: Set<ItemKey>,
     pulsing: ItemKey?,
+    revealed: Set<ItemKey>? = null,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val gap = 5.dp
@@ -215,12 +220,22 @@ private fun TriangleGrid(
                             GhostCell(tileSize)
                         } else {
                             val item = ItemKey.of(r, c)
-                            Tile(
-                                state = tiles.getValue(item),
-                                promoted = item in promoted,
-                                pulsing = item == pulsing,
-                                size = tileSize,
-                            )
+                            if (revealed != null && item !in revealed) {
+                                EmptyTile(tileSize)
+                            } else {
+                                val pop = remember(item) {
+                                    androidx.compose.animation.core.Animatable(if (revealed != null) 0.5f else 1f)
+                                }
+                                LaunchedEffect(item) { pop.animateTo(1f, tween(220)) }
+                                Box(modifier = Modifier.scale(pop.value)) {
+                                    Tile(
+                                        state = tiles.getValue(item),
+                                        promoted = item in promoted,
+                                        pulsing = item == pulsing,
+                                        size = tileSize,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -234,6 +249,16 @@ private fun AxisCell(text: String, size: Dp) {
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         Text(text = text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = MapColors.Muted)
     }
+}
+
+/** A not-yet-revealed tile during the calibration reveal (mvp-spec §8). */
+@Composable
+private fun EmptyTile(size: Dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .background(MulpluColors.CardGrey, RoundedCornerShape(9.dp)),
+    )
 }
 
 @Composable
@@ -316,7 +341,7 @@ private fun PromotedArrow(modifier: Modifier) {
 }
 
 @Composable
-private fun Legend() {
+internal fun Legend() {
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         LegendEntry(MulpluColors.CorrectGreen, "kannst du")
         LegendEntry(MulpluColors.InPlayBlue, "üben wir")

@@ -11,6 +11,7 @@ import com.mulplu.app.engine.Engine
 import com.mulplu.app.engine.Event
 import com.mulplu.app.engine.ItemKey
 import com.mulplu.app.engine.Question
+import com.mulplu.app.engine.Ranking
 import java.time.LocalDate
 import kotlin.random.Random
 import kotlinx.coroutines.delay
@@ -26,7 +27,7 @@ sealed interface Screen {
     /** Home: the progress map. */
     data object Map : Screen
 
-    /** First run only. Placeholder scaffold until #22 delivers the real flow. */
+    /** First run only; phases are sub-state of the screen (mvp-spec §10). */
     data object Calibration : Screen
 
     data object Question : Screen
@@ -112,23 +113,90 @@ class AppViewModel(
         }
     }
 
-    /** Temporary probe driver for the #22 placeholder. */
-    fun answerCalibrationProbe(correct: Boolean) {
+    // ------------------------------------------------------------ calibration
+
+    /** Current calibration phase; null once the pass (incl. reveal) is left. */
+    var calibrationPhase by mutableStateOf<CalPhase?>(null)
+        private set
+
+    /** The probe on screen while [calibrationPhase] is [CalPhase.Probe]. */
+    var calProbe by mutableStateOf<CalProbeUi?>(null)
+        private set
+
+    /** True during the neutral acknowledgment window after a probe answer. */
+    var calAcking by mutableStateOf(false)
+        private set
+
+    /** Sets the landing phase (intro or resume-by-round) once, on first show. */
+    fun ensureCalibrationPhase() {
+        if (calibrationPhase != null) return
         viewModelScope.launch {
+            val state = repository.state.filterNotNull().first()
+            if (calibrationPhase == null && !state.calibrationComplete) {
+                calibrationPhase = initialCalPhase(state)
+            }
+        }
+    }
+
+    /** Intro / resume / breather CTA: present the next probe. */
+    fun continueCalibration() {
+        viewModelScope.launch {
+            val state = repository.state.filterNotNull().first()
+            presentCalProbe(state)
+        }
+    }
+
+    private fun presentCalProbe(state: AppState) {
+        if (state.calibrationComplete) return
+        val item = Ranking.ORDER[state.calibrationIndex]
+        val flip = random.nextBoolean()
+        calProbe = CalProbeUi(
+            item = item,
+            shownA = if (flip) item.b else item.a,
+            shownB = if (flip) item.a else item.b,
+        )
+        calibrationPhase = CalPhase.Probe
+    }
+
+    /** A probe answer; `given == null` is "Weiß nicht" (a miss, mvp-spec §8). */
+    fun answerCalibrationProbe(given: Int?) {
+        if (calAcking || calibrationPhase != CalPhase.Probe) return
+        calAcking = true
+        viewModelScope.launch {
+            var beforeIndex = 0
             var completedBefore = false
             val after = repository.update { state ->
                 if (state.calibrationComplete) return@update state
+                beforeIndex = state.calibrationIndex
                 completedBefore = state.wasEverCompleted
-                val item = com.mulplu.app.engine.Ranking.ORDER[state.calibrationIndex]
-                Engine.reduce(
-                    state,
-                    Event.CalibrationProbeAnswered(if (correct) item.product else null),
-                    LocalDate.now(),
-                )
+                Engine.reduce(state, Event.CalibrationProbeAnswered(given), LocalDate.now())
             }
             if (!completedBefore && after.wasEverCompleted) terminalPending = true
-            if (after.calibrationComplete) backToMap()
+            // Neutral acknowledgment: the stamp lands, no right/wrong echo.
+            delay(CAL_STAMP_MS)
+            calAcking = false
+            when (val next = calPhaseAfterProbe(beforeIndex, after)) {
+                CalPhase.Probe -> presentCalProbe(after)
+                else -> {
+                    calProbe = null
+                    calibrationPhase = next
+                }
+            }
         }
+    }
+
+    /** Mercy-stop CTA: on to the reveal. */
+    fun mercyAcknowledged() {
+        viewModelScope.launch {
+            val state = repository.state.filterNotNull().first()
+            calibrationPhase = CalPhase.Reveal(known = knownCount(state))
+        }
+    }
+
+    /** Reveal CTA: straight into day 1 — no separate hand-over (mvp-spec §8). */
+    fun finishCalibration() {
+        calibrationPhase = null
+        startPractice()
     }
 
     /** An answer on the question screen; `given == null` is "Weiß nicht". */
@@ -210,5 +278,6 @@ class AppViewModel(
     companion object {
         const val CORRECT_FEEDBACK_MS = 550L
         const val WRONG_FEEDBACK_MS = 2600L
+        const val CAL_STAMP_MS = 500L
     }
 }

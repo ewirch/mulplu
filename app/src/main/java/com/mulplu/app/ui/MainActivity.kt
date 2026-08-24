@@ -4,38 +4,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mulplu.app.data.StateRepository
-import com.mulplu.app.engine.AppState
 import com.mulplu.app.engine.Engine
 import java.time.LocalDate
 
-/**
- * The single Activity (ADR-0003). The question screen (#20) and the progress
- * map (#21) are real; the calibration composable here is a placeholder until
- * #22 lands.
- */
+/** The single Activity (ADR-0003). */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,8 +53,23 @@ private fun App(vm: AppViewModel) {
     LaunchedEffect(vm.soundEvent) { vm.soundEvent?.let { (_, sound) -> soundPlayer.play(sound) } }
 
     val appState = state ?: return
-    if (!appState.calibrationComplete) {
-        CalibrationScaffold(vm, appState)
+    // Calibration: while incomplete, and through its mercy/reveal phases even
+    // though the last probe already flipped `calibrationComplete` (mvp-spec §8).
+    val calPhase = vm.calibrationPhase
+    if (!appState.calibrationComplete || calPhase is CalPhase.Mercy || calPhase is CalPhase.Reveal) {
+        LaunchedEffect(Unit) { vm.ensureCalibrationPhase() }
+        if (calPhase != null) {
+            CalibrationScreen(
+                state = appState,
+                phase = calPhase,
+                probe = vm.calProbe,
+                acking = vm.calAcking,
+                onContinue = vm::continueCalibration,
+                onAnswer = vm::answerCalibrationProbe,
+                onMercyOk = vm::mercyAcknowledged,
+                onFinish = vm::finishCalibration,
+            )
+        }
         return
     }
     when (vm.screen) {
@@ -90,31 +92,6 @@ private fun App(vm: AppViewModel) {
                 onStart = vm::startPractice,
                 onPlayDayClose = soundPlayer::playDayClose,
             )
-        }
-    }
-}
-
-/**
- * Temporary calibration scaffold (replaced by #22): drives real
- * `CalibrationProbeAnswered` events so the practice loop can be reached.
- */
-@Composable
-private fun CalibrationScaffold(vm: AppViewModel, state: AppState) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = "Kalibrierung: ${state.calibrationIndex} / 36")
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { vm.answerCalibrationProbe(correct = true) }) {
-                Text("Richtig")
-            }
-            Button(onClick = { vm.answerCalibrationProbe(correct = false) }) {
-                Text("Weiß nicht")
-            }
         }
     }
 }
