@@ -133,14 +133,22 @@ not a count. (Settled by [#14](https://github.com/ewirch/mulplu/issues/14).)
 
 ## "Weiß nicht"
 
-The child is never forced to guess. Every free-input probe of the calibration offers a
-**"Weiß nicht"** button, visually prominent and carrying the progress map's *in play*
-colour, so choosing it reads as *this item goes on the practice pile* rather than as a
-failure. Mechanically it is a **miss**: the item is seeded level 1 and the press counts
-toward the mercy stop's 6-in-a-row.
+The child is never forced to guess. **Every question offers a "Weiß nicht" button** —
+all calibration probes and every practice question on every level. The affordance is
+identical everywhere: visually prominent, carrying the progress map's *in play* colour
+(so choosing it reads as *this item goes on the practice pile* rather than as a
+failure), same label, fixed position below the answer area — it does not move when the
+answer area reflows between levels, and it is set apart so it never reads as an extra
+answer option.
 
-Whether the affordance exists outside calibration is open — see
-[#15](https://github.com/ewirch/mulplu/issues/15).
+Mechanically it is a **miss** wherever it appears. In calibration: the item is seeded
+level 1 and the press counts toward the mercy stop's 6-in-a-row. In practice: as the
+day's counting answer it demotes (or revokes consolidation), and the item stays
+unsatisfied; there is no third answer category in the state.
+
+Feedback is the miss feedback **without the error beat**: no red flash, no fading of a
+picked option (nothing was picked) — only the answer reveal, with the usual timing and
+auto-advance.
 
 ## Reveal
 
