@@ -2,29 +2,41 @@ package com.mulplu.app.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mulplu.app.data.StateRepository
+import com.mulplu.app.engine.AppState
 import com.mulplu.app.engine.Engine
-import com.mulplu.app.engine.Event
 import java.time.LocalDate
-import kotlinx.coroutines.launch
 
 /**
- * Temporary scaffolding until the real screens land (#20, #21, #22): shows the
- * persisted calibration progress and lets a tap run one calibration probe
- * through the engine, so persistence is exercised end to end.
+ * The single Activity (ADR-0003). The question screen is real (#20); the map
+ * and calibration composables here are placeholders until #21 and #22 land.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,31 +45,91 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    val state by repository.state.collectAsState(initial = null)
-                    val scope = rememberCoroutineScope()
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Text(text = "Mulplu")
-                        Text(text = "Kalibrierung: ${state?.calibrationIndex ?: "…"} / 36")
-                        Button(onClick = {
-                            scope.launch {
-                                repository.update {
-                                    if (it.calibrationComplete) return@update it
-                                    Engine.reduce(
-                                        it,
-                                        Event.CalibrationProbeAnswered(null),
-                                        LocalDate.now(),
-                                    )
-                                }
-                            }
-                        }) {
-                            Text(text = "Weiß nicht")
-                        }
-                    }
+                    val vm: AppViewModel = viewModel(
+                        factory = object : ViewModelProvider.Factory {
+                            @Suppress("UNCHECKED_CAST")
+                            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                                AppViewModel(repository) as T
+                        },
+                    )
+                    App(vm)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun App(vm: AppViewModel) {
+    val state by vm.appState.collectAsState()
+    val context = LocalContext.current
+    val soundPlayer = remember { SoundPlayer(context) }
+    DisposableEffect(Unit) { onDispose { soundPlayer.release() } }
+    LaunchedEffect(vm.soundEvent) { vm.soundEvent?.let { (_, sound) -> soundPlayer.play(sound) } }
+
+    val appState = state ?: return
+    if (!appState.calibrationComplete) {
+        CalibrationScaffold(vm, appState)
+        return
+    }
+    when (vm.screen) {
+        Screen.Question -> {
+            // System back → map, no confirmation (mvp-spec §10); the open
+            // question evaporates.
+            BackHandler { vm.backToMap() }
+            vm.questionUi?.let { ui ->
+                QuestionScreen(ui = ui, feedback = vm.feedback, onAnswer = vm::answer)
+            }
+        }
+        else -> MapPlaceholder(vm, appState)
+    }
+}
+
+/** Placeholder home screen until #21 delivers the real progress map. */
+@Composable
+private fun MapPlaceholder(vm: AppViewModel, state: AppState) {
+    val dayDone = Engine.openToday(state, LocalDate.now()).isEmpty()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text = "Mulplu", fontSize = 32.sp)
+        if (dayDone) {
+            Text(text = "Für heute fertig")
+        } else {
+            Button(
+                onClick = vm::startPractice,
+                colors = ButtonDefaults.buttonColors(containerColor = MulpluColors.AccentBlue),
+            ) {
+                Text(text = "Los geht's", fontSize = 20.sp, color = Color.White)
+            }
+        }
+    }
+}
+
+/**
+ * Temporary calibration scaffold (replaced by #22): drives real
+ * `CalibrationProbeAnswered` events so the practice loop can be reached.
+ */
+@Composable
+private fun CalibrationScaffold(vm: AppViewModel, state: AppState) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text = "Kalibrierung: ${state.calibrationIndex} / 36")
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { vm.answerCalibrationProbe(correct = true) }) {
+                Text("Richtig")
+            }
+            Button(onClick = { vm.answerCalibrationProbe(correct = false) }) {
+                Text("Weiß nicht")
             }
         }
     }
