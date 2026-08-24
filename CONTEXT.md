@@ -3,8 +3,9 @@
 Vocabulary of the domain. Terms here are the ones used in code, tickets and ADRs.
 Settled so far by [#2](https://github.com/ewirch/mulplu/issues/2),
 [#5](https://github.com/ewirch/mulplu/issues/5),
-[#7](https://github.com/ewirch/mulplu/issues/7) and
-[#8](https://github.com/ewirch/mulplu/issues/8).
+[#7](https://github.com/ewirch/mulplu/issues/7),
+[#8](https://github.com/ewirch/mulplu/issues/8) and
+[#9](https://github.com/ewirch/mulplu/issues/9).
 
 ## Item
 
@@ -140,25 +141,55 @@ satisfied items, so a wrong answer slows progress but never takes it back.
 The current day is read each time a question is presented, and nowhere else. A day
 boundary crossed mid-play therefore applies immediately.
 
-What the child gets for reaching it is gamification, not domain — see
-[#9](https://github.com/ewirch/mulplu/issues/9).
+Reaching it awards **nothing**. The day closes with the progress map showing the day's
+movements; the close is marked by an animation and a short sound of its own, distinct
+from the answer feedback but no larger than it. There is no medal, no token and no
+record that the day was completed — which is also why an unfinished day cannot be
+punished: no surface exists on which it would be visible. (Settled by
+[#9](https://github.com/ewirch/mulplu/issues/9).)
 
 ## Progress map
 
-The persistent picture of where every one of the 36 items stands: which are
-consolidated, which are in the learning front, which have not been started. It is both
-the app's home and its day-end report — at the close of a day it also marks the
-movements that day produced.
+The persistent picture of where every one of the 36 items stands. It is both the app's
+home and its day-end report — at the close of a day it also marks the movements that day
+produced.
+
+Each item is in exactly one of three states, derived from question-pool membership:
+
+| State | Meaning |
+|---|---|
+| **Consolidated** | level 5 |
+| **In play** | in the pool, not consolidated — i.e. the learning front plus every item whose consolidation was revoked |
+| **Not started** | not in the pool |
+
+On top of that sits one day overlay, **promoted today**, which resets at midnight. An
+item consolidated today carries both. A demotion carries no overlay: it is visible as a
+change of state, never announced.
+
+The **level is deliberately invisible** — "in play" spans levels 1 to 4 undifferentiated.
+The only threshold that means anything to the child is *consolidated*. A revoked item is
+therefore indistinguishable from one never yet mastered: it reads as being worked on,
+not as lost.
 
 It reports *movement*, never a score: there is no point total, no error count and no
 comparison against previous days. A miss is not damage in this domain but the trigger
 of a helpful move, so counting misses would frame as loss what the system treats as
 adjustment.
 
+The day's movements are an **overlay on the map**, not a separate message. A day with no
+movements — every day after completion, and any day whose counting answers were all
+missed — leaves a quiet map rather than an empty sentence.
+
 ## Completion
 
 All 36 items consolidated. A one-time event: an item revoked and re-consolidated later
-does not produce it again.
+does not produce it again. It fires even when calibration alone consolidates all 36 on
+the first run — the statement is true, and there is no second firing condition.
+
+Completion is the only moment the app celebrates loudly, and it leaves the app's **only
+permanent mark**: the map itself carries from then on that it was once complete, without
+a date and without a count. Tiles show the current state and can be taken back; the map
+keeps the high-water mark.
 
 Completion changes nothing about how the app behaves. The pool is all 36, the learning
 front is empty, and the day goal stays "all 36 answered correctly today" — at free
@@ -181,6 +212,13 @@ the difficulty, never their plausibility, which is uniform across levels.
 
 **Nothing is timed.** No countdown, no response-time measurement, no personal-best
 time, no time pressure of any kind. Correctness is the only signal the app records.
+
+**Nothing accumulates across days** except the items' own state. No points, no currency,
+no experience, no badges, no collection, no streak and no record of which days were
+practised. Everything the child sees is domain state — the item states on the progress
+map, the day's movements, the permanent completion mark — so there is nothing to earn,
+nothing to lose, and nothing to farm: all reward is attached to the level, and the level
+moves at most once per item per day, on the counting answer.
 
 **There is no session.** The day is the only unit. A go has no length of its own — no
 item count, no clock, no stop-at-first-mistake — so there is nothing to resume, count
