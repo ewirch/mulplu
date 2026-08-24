@@ -66,10 +66,17 @@
   .tile.consolidated { background: var(--tile-done); }
   .tile.play { background: var(--tile-play); }
   .tile.notstarted { background: var(--tile-none); }
-  /* glyph row: check (consolidated) and/or arrow (levelled up today) */
-  .tile .glyphs { display: flex; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
+  /* check centred; arrow (levelled up today) pinned to the top-right corner */
+  .tile .glyphs { display: flex; align-items: center; justify-content: center; line-height: 1; }
   .tile .check { font-size: 16px; }
-  .tile .arrow { font-size: 21px; font-weight: 700; }
+  .tile .arrow {
+    position: absolute; top: -7px; right: -7px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #F5A623; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800;
+    box-shadow: 0 1px 3px #0003;
+  }
   .tile.animating { transform: scale(1.18); }
 
   /* ---------- permanent completion badge: rosette in the header ---------- */
