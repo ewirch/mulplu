@@ -1,0 +1,305 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>PROTOTYPE — progress map (issue #10)</title>
+<style>
+  :root {
+    --bg: #f7f5f0;
+    --ink: #2c2a26;
+    --muted: #9b968c;
+    --green: #4ea364;
+    --green-soft: #dceadf;
+    --play: #f0a13a;
+    --neutral: #e6e2d9;
+    --tile: 40px;
+    --gap: 5px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+    min-height: 100vh; padding-bottom: 190px;
+  }
+  .banner {
+    width: 100%; background: #ffe9a8; color: #6b5300;
+    font-size: 13px; text-align: center; padding: 6px;
+  }
+  .phone {
+    width: 380px; margin: 18px 0; padding: 18px 14px 22px;
+    background: #fff; border-radius: 22px; box-shadow: 0 2px 18px #0001;
+    position: relative; overflow: hidden;
+  }
+
+  /* ---------- the map ---------- */
+  .grid { display: grid; gap: var(--gap); justify-content: center; margin: 8px 0 4px; }
+  .cell {
+    width: var(--tile); height: var(--tile);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; position: relative;
+  }
+  .axis { color: var(--muted); font-weight: 600; }
+  .axis.corner { color: transparent; }
+
+  .tile {
+    border-radius: 9px; background: var(--neutral);
+    transition: background .45s, transform .45s, box-shadow .45s;
+  }
+  .tile .mark { font-size: 17px; opacity: 0; transition: opacity .4s; }
+
+  /* base states */
+  .tile.consolidated { background: var(--green); }
+  .tile.consolidated .mark { opacity: 1; color: #fff; }
+  .tile.play { background: #fff; box-shadow: inset 0 0 0 2.5px var(--play); }
+  .tile.notstarted { background: var(--neutral); }
+
+  /* promoted-today overlay */
+  .tile.promoted::after {
+    content: "▲"; position: absolute; top: -2px; right: 2px;
+    font-size: 10px; color: var(--ink); opacity: .55;
+  }
+
+  /* day-close animation */
+  .tile.animating { transform: scale(1.22); }
+
+  /* ---------- upper-half variants ---------- */
+  body[data-upper="none"]   .cell.upper { visibility: hidden; }
+  body[data-upper="wash"]   .cell.upper { visibility: hidden; }
+  body[data-upper="wash"]   .grid { background: linear-gradient(135deg, #00000000 50%, #f2efe8 50%); border-radius: 12px; padding: 6px; }
+  body[data-upper="ghost"]  .cell.upper { visibility: visible; }
+  .cell.upper .ghost {
+    width: var(--tile); height: var(--tile); border-radius: 9px;
+    border: 1.5px dashed #e0dbd0;
+  }
+
+  /* ---------- tile shape variants ---------- */
+  body[data-shape="square"] .tile { border-radius: 9px; }
+  body[data-shape="round"]  .tile { border-radius: 50%; }
+
+  /* ---------- permanent mark variants ---------- */
+  .mark-band, .mark-frame, .mark-emblem { display: none; }
+  body[data-perm="off"] .permwrap { display: none; }
+  body[data-perm="band"]   .mark-band   { display: block; }
+  body[data-perm="frame"]  .mark-frame  { display: block; }
+  body[data-perm="emblem"] .mark-emblem { display: block; }
+
+  .mark-band {
+    height: 5px; border-radius: 3px; margin: 14px 24px 0;
+    background: linear-gradient(90deg, #d8b25e, #f0dca2, #d8b25e);
+  }
+  body[data-perm="frame"] .grid {
+    outline: 2.5px solid #d8b25e; outline-offset: 9px; border-radius: 6px;
+  }
+  .mark-emblem { text-align: center; font-size: 22px; color: #c9a24a; margin-top: 10px; }
+
+  /* ---------- chrome ---------- */
+  h1.title { font-size: 15px; font-weight: 600; text-align: center; margin: 2px 0 10px; color: var(--muted); }
+  .footer { text-align: center; margin-top: 18px; min-height: 76px; }
+  .start {
+    display: inline-block; border: none; border-radius: 999px;
+    background: var(--ink); color: #fff; font-size: 19px;
+    padding: 14px 46px; cursor: pointer;
+  }
+  .done { color: var(--muted); font-size: 17px; padding-top: 16px; }
+
+  /* ---------- terminal overlay ---------- */
+  .terminal {
+    position: absolute; inset: 0; background: #fffdf6ee;
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; animation: pop .6s ease-out;
+  }
+  .terminal.on { display: flex; }
+  .terminal .big { font-size: 74px; }
+  .terminal .txt { font-size: 21px; font-weight: 600; }
+  @keyframes pop { from { opacity: 0; transform: scale(.9); } to { opacity: 1; transform: none; } }
+  .spark { position: absolute; font-size: 26px; animation: fly .9s ease-out forwards; }
+  @keyframes fly { to { transform: translate(var(--dx), var(--dy)) scale(.3); opacity: 0; } }
+
+  /* ---------- control bar ---------- */
+  .bar {
+    position: fixed; bottom: 0; left: 0; right: 0; background: #fffffff2;
+    border-top: 1px solid #ddd8cc; padding: 10px 14px; font-size: 13px;
+    display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: center;
+  }
+  .bar fieldset { border: none; padding: 0; margin: 0; display: flex; align-items: center; gap: 6px; }
+  .bar legend { display: none; }
+  .bar b { color: var(--muted); font-weight: 600; margin-right: 2px; }
+  .bar button {
+    border: 1px solid #ccc6b8; background: #fff; border-radius: 6px;
+    padding: 4px 9px; cursor: pointer; font-size: 13px;
+  }
+  .bar button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .state { width: 100%; text-align: center; color: var(--muted); font-size: 12px; }
+</style>
+
+<div class="banner">PROTOTYPE — wegwerfbar. Layoutfragen zu Issue #10 (Fortschrittskarte). Kein Produktionscode.</div>
+
+<div class="phone" id="phone">
+  <h1 class="title" id="title">Einmaleins</h1>
+  <div class="permwrap"><div class="mark-band"></div></div>
+  <div class="grid" id="grid"></div>
+  <div class="permwrap"><div class="mark-emblem">✦</div></div>
+  <div class="footer" id="footer"></div>
+  <div class="terminal" id="terminal">
+    <div class="big">🏆</div>
+    <div class="txt">Alle 36 geschafft!</div>
+  </div>
+</div>
+
+<div class="bar">
+  <fieldset><b>Obere Hälfte</b>
+    <button data-k="upper" data-v="none">leer</button>
+    <button data-k="upper" data-v="wash">Fläche</button>
+    <button data-k="upper" data-v="ghost">Geisterkacheln</button>
+  </fieldset>
+  <fieldset><b>Kachelform</b>
+    <button data-k="shape" data-v="square">eckig</button>
+    <button data-k="shape" data-v="round">rund</button>
+  </fieldset>
+  <fieldset><b>Tag</b>
+    <button data-k="day" data-v="open">offen</button>
+    <button data-k="day" data-v="satisfied">erfüllt</button>
+  </fieldset>
+  <fieldset><b>Permanente Marke</b>
+    <button data-k="perm" data-v="off">aus</button>
+    <button data-k="perm" data-v="band">Band</button>
+    <button data-k="perm" data-v="frame">Rahmen</button>
+    <button data-k="perm" data-v="emblem">Emblem</button>
+  </fieldset>
+  <fieldset><b>Szenario</b>
+    <button data-act="mid">Mitten am Tag</button>
+    <button data-act="fresh">Erstlauf</button>
+    <button data-act="late">Fast fertig</button>
+    <button data-act="close">Tagesabschluss ▶</button>
+    <button data-act="terminal">Terminal-Event ▶</button>
+  </fieldset>
+  <div class="state" id="stateline"></div>
+</div>
+
+<script>
+// ---- item model: 36 unordered pairs, a<=b, factors 2..9 --------------------
+const F = [2,3,4,5,6,7,8,9];
+const items = [];
+for (const b of F) for (const a of F) if (a <= b) items.push({ a, b, state: "notstarted", promoted: false });
+const key = (a,b) => `${Math.min(a,b)}x${Math.max(a,b)}`;
+const get = (a,b) => items.find(i => key(i.a,i.b) === key(a,b));
+
+// ---- render ---------------------------------------------------------------
+const grid = document.getElementById("grid");
+function render() {
+  grid.innerHTML = "";
+  grid.style.gridTemplateColumns = `repeat(${F.length + 1}, var(--tile))`;
+  // header row
+  grid.append(cellEl("axis corner", "·"));
+  for (const c of F) grid.append(cellEl("axis", c));
+  for (const r of F) {
+    grid.append(cellEl("axis", r));
+    for (const c of F) {
+      if (c > r) { // upper half — mirror of an existing item
+        const up = cellEl("upper", "");
+        up.innerHTML = '<div class="ghost"></div>';
+        grid.append(up);
+      } else {
+        const it = get(r, c);
+        const el = cellEl(`tile ${it.state}${it.promoted ? " promoted" : ""}`, "");
+        el.dataset.key = key(r, c);
+        el.innerHTML = '<span class="mark">✓</span>';
+        grid.append(el);
+      }
+    }
+  }
+  renderFooter();
+  stateline();
+}
+function cellEl(cls, txt) {
+  const d = document.createElement("div");
+  d.className = "cell " + cls; d.textContent = txt; return d;
+}
+function renderFooter() {
+  const f = document.getElementById("footer");
+  f.innerHTML = document.body.dataset.day === "open"
+    ? '<button class="start">Los geht\'s</button>'
+    : '<div class="done">Für heute fertig</div>';
+}
+function stateline() {
+  const n = s => items.filter(i => i.state === s).length;
+  document.getElementById("stateline").textContent =
+    `konsolidiert ${n("consolidated")} · im Spiel ${n("play")} · nicht begonnen ${n("notstarted")} · heute befördert ${items.filter(i=>i.promoted).length}`;
+}
+
+// ---- scenarios ------------------------------------------------------------
+function scenario(name) {
+  items.forEach(i => { i.state = "notstarted"; i.promoted = false; });
+  if (name === "fresh") {
+    items.slice(0, 10).forEach(i => i.state = "play");
+  } else if (name === "mid") {
+    items.slice(0, 14).forEach(i => i.state = "consolidated");
+    items.slice(14, 24).forEach(i => i.state = "play");
+    items.slice(12, 14).forEach(i => i.promoted = true);
+  } else if (name === "late") {
+    items.forEach(i => i.state = "consolidated");
+    items.slice(33).forEach(i => { i.state = "play"; i.promoted = false; });
+  }
+  document.getElementById("terminal").classList.remove("on");
+  render();
+}
+
+// ---- day close animation --------------------------------------------------
+async function dayClose() {
+  const moved = items.filter(i => i.promoted);
+  const targets = moved.length ? moved : items.filter(i => i.state === "play").slice(0, 3);
+  for (const it of targets) {
+    const el = grid.querySelector(`[data-key="${key(it.a, it.b)}"]`);
+    if (!el) continue;
+    el.classList.add("animating");
+    await sleep(260);
+    el.classList.remove("animating");
+    await sleep(120);
+  }
+}
+async function terminal() {
+  items.forEach(i => { i.state = "consolidated"; i.promoted = false; });
+  const last = items[items.length - 1];
+  last.state = "play"; render();
+  await sleep(400);
+  last.state = "consolidated"; last.promoted = true; render();
+  const el = grid.querySelector(`[data-key="${key(last.a, last.b)}"]`);
+  el.classList.add("animating"); await sleep(400); el.classList.remove("animating");
+  sparks();
+  await sleep(500);
+  document.getElementById("terminal").classList.add("on");
+  document.body.dataset.day = "satisfied"; renderFooter();
+}
+function sparks() {
+  const p = document.getElementById("phone");
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement("div");
+    s.className = "spark"; s.textContent = "✦";
+    s.style.left = "50%"; s.style.top = "45%";
+    s.style.setProperty("--dx", (Math.random() * 300 - 150) + "px");
+    s.style.setProperty("--dy", (Math.random() * 300 - 150) + "px");
+    p.append(s); setTimeout(() => s.remove(), 900);
+  }
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ---- controls -------------------------------------------------------------
+document.querySelector(".bar").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.k) {
+    document.body.dataset[b.dataset.k] = b.dataset.v;
+    if (b.dataset.k === "day") renderFooter();
+    syncButtons();
+  } else if (b.dataset.act === "close") dayClose();
+  else if (b.dataset.act === "terminal") terminal();
+  else scenario(b.dataset.act);
+});
+function syncButtons() {
+  document.querySelectorAll(".bar button[data-k]").forEach(b => {
+    b.setAttribute("aria-pressed", document.body.dataset[b.dataset.k] === b.dataset.v);
+  });
+}
+
+Object.assign(document.body.dataset, { upper: "none", shape: "square", day: "open", perm: "off" });
+syncButtons();
+scenario("mid");
+</script>
