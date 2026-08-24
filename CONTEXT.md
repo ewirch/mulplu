@@ -1,8 +1,9 @@
 # Context: multiplication-table trainer
 
 Vocabulary of the domain. Terms here are the ones used in code, tickets and ADRs.
-Settled so far by [#2](https://github.com/ewirch/mulplu/issues/2) and
-[#5](https://github.com/ewirch/mulplu/issues/5).
+Settled so far by [#2](https://github.com/ewirch/mulplu/issues/2),
+[#5](https://github.com/ewirch/mulplu/issues/5) and
+[#7](https://github.com/ewirch/mulplu/issues/7).
 
 ## Item
 
@@ -31,7 +32,8 @@ the measure of how well the item is known — there is no separate score.
 Levels 1–3 are multiple choice; the child presses one of the offered numbers. Levels 4
 and 5 present the same free-input interaction — they differ only in status.
 
-A new item enters at level 1. Level 1 is the floor.
+Every item's initial level is seeded by calibration: produced correctly → level 5,
+otherwise → level 1. Level 1 is the floor.
 
 ## Counting answer
 
@@ -60,44 +62,63 @@ separate rule (at most one movement per item per day follows from the definition
 counting answer), and no time-based decay: an item keeps being asked, so forgetting is
 measured rather than estimated.
 
-Minimum time from entry to consolidated: **4 days**.
+Minimum time from level 1 to consolidated: **4 days**. (Calibration can seed level 5
+directly — see Calibration.)
 
 ## Consolidated (`gefestigt`)
 
 An item is **consolidated** when it reaches level 5 — i.e. the child has produced its
 answer by free input, without choices, at least once.
 
-Reaching it fires once **per item, ever**: one new item is admitted to the question
-pool. An item that re-earns the status after a revocation admits nothing further —
-otherwise an item oscillating between levels 4 and 5 would pump the pool, and
-instability would be rewarded with more new material.
+First-ever consolidation admits one new item: the item leaves the learning front's
+window and the next never-consolidated item in admission order slides in. An item
+that re-earns the status after a revocation admits nothing further (it no longer
+occupies the window) — an item oscillating between levels 4 and 5 cannot pump the
+pool.
 
 A wrong counting answer on a consolidated item drops it to level 4 and **revokes** the
 status; it is re-earned the same way.
 
 ## Question pool
 
-The set of items the app currently asks from — always a **prefix of the admission
-order**. Its size is the starting size plus the number of items that have ever been
-consolidated, capped at 36.
+The set of items the app currently asks from:
 
-It therefore **never shrinks** by construction rather than by rule: an item that falls
-back from consolidated stays in the pool, and membership is not something the app
-records per item.
+**pool = { every item ever consolidated } ∪ { the first 10 never-consolidated items
+of the admission order }**
 
-The starting size is 10. Calibration
-([#7](https://github.com/ewirch/mulplu/issues/7)) may raise it and may seed levels, but
-may never lower it or pull an individual item in out of order.
+The 10-wide window is the **learning front**: at most 10 never-consolidated items are
+in play at once. When fewer than 10 never-consolidated items remain, the window
+shrinks; the pool caps at 36.
+
+Membership is derived from per-item state (`hasEverConsolidated` plus the admission
+order), never stored. The pool **never shrinks**: `hasEverConsolidated` is monotone,
+and a first-time consolidation moves the item from the window into the
+ever-consolidated set while the next never-consolidated item slides in. A revoked
+item stays in the pool via the ever-consolidated set and occupies no window slot.
+
+With nothing known at calibration this reduces to the first 10 items of the admission
+order — the cold-start case. (Settled by
+[#7](https://github.com/ewirch/mulplu/issues/7), amending #5's prefix formulation.)
 
 ## Admission order
 
 The fixed, once-authored ranking of all 36 items from easiest to hardest. It decides
-which item is admitted when a consolidation fires, and — as the pool's prefix — which
-items the app starts with.
+the order in which never-consolidated items enter the learning front — new material
+always arrives easiest-first. (Since #7 the pool as a whole is no longer a prefix of
+this order: items the calibration found already known join the pool regardless of
+their position.)
 
 It is a frozen list, not a formula evaluated at runtime. Its ordering follows the
 problem-size effect (smaller product = easier) with the shortcut families (squares,
 `×9`) pulled forward.
+
+## Calibration (`Kalibrierung`)
+
+The one-time first-run pass that seeds every item's initial level: each of the 36
+items is asked once by free input. Correct → seeded **consolidated** (level 5),
+wrong → **level 1**. Nothing in between — a single untimed probe cannot tell fluent
+from shaky; the ladder sorts that out in normal practice, where a miscalibrated
+"known" is asked daily and revoked on its first wrong counting answer.
 
 ## Day goal
 
