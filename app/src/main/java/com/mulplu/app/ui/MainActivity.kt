@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -22,10 +21,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -35,8 +32,9 @@ import com.mulplu.app.engine.Engine
 import java.time.LocalDate
 
 /**
- * The single Activity (ADR-0003). The question screen is real (#20); the map
- * and calibration composables here are placeholders until #21 and #22 land.
+ * The single Activity (ADR-0003). The question screen (#20) and the progress
+ * map (#21) are real; the calibration composable here is a placeholder until
+ * #22 lands.
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,31 +79,17 @@ private fun App(vm: AppViewModel) {
                 QuestionScreen(ui = ui, feedback = vm.feedback, onAnswer = vm::answer)
             }
         }
-        else -> MapPlaceholder(vm, appState)
-    }
-}
-
-/** Placeholder home screen until #21 delivers the real progress map. */
-@Composable
-private fun MapPlaceholder(vm: AppViewModel, state: AppState) {
-    val dayDone = Engine.openToday(state, LocalDate.now()).isEmpty()
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(text = "Mulplu", fontSize = 32.sp)
-        if (dayDone) {
-            Text(text = "Für heute fertig")
-        } else {
-            Button(
-                onClick = vm::startPractice,
-                colors = ButtonDefaults.buttonColors(containerColor = MulpluColors.AccentBlue),
-            ) {
-                Text(text = "Los geht's", fontSize = 20.sp, color = Color.White)
-            }
+        else -> {
+            val today = LocalDate.now()
+            MapScreen(
+                state = appState,
+                dayDone = Engine.openToday(appState, today).isEmpty(),
+                today = today,
+                dayCloseTick = vm.dayCloseTick,
+                terminalTick = vm.terminalTick,
+                onStart = vm::startPractice,
+                onPlayDayClose = soundPlayer::playDayClose,
+            )
         }
     }
 }
