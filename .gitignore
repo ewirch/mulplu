@@ -34,3 +34,6 @@ google-services.json
 *.hprof
 
 .claude
+
+# Throwaway prototype scripts (see prototype/ branches)
+__pycache__/
