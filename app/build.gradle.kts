@@ -17,9 +17,32 @@ android {
         versionName = "0.1"
     }
 
+    signingConfigs {
+        create("release") {
+            // Sideloading key. Local, never committed. Create with:
+            //   keytool -genkeypair -keystore app/release.keystore -alias mulplu \
+            //     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Mulplu"
+            // Passwords via env MULPLU_STORE_PASSWORD / MULPLU_KEY_PASSWORD.
+            val ks = file("release.keystore")
+            if (ks.exists()) {
+                storeFile = ks
+                storePassword = System.getenv("MULPLU_STORE_PASSWORD")
+                keyAlias = "mulplu"
+                keyPassword = System.getenv("MULPLU_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            // Fall back to the debug key so assembleRelease always yields an
+            // installable (sideloadable) APK, even without a local keystore.
+            signingConfig = if (file("release.keystore").exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {

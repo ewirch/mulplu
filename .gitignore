@@ -8,3 +8,6 @@ build/
 captures/
 .externalNativeBuild/
 .cxx/
+
+# local signing key for sideloading
+app/release.keystore
