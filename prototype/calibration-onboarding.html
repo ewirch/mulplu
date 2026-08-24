@@ -1,6 +1,6 @@
 <!--
   PROTOTYPE — throwaway. Answers ticket #14 "Prototype the first-run onboarding
-  around calibration" (map #1). Round 2, after dev feedback on round 1.
+  around calibration" (map #1). Round 3, after dev feedback on round 2.
 
   Settled in round 1:
     - Intro, probe, mercy stop, day close and resume greeting come from variant
@@ -8,21 +8,22 @@
     - The reveal comes from variant B "Landkarte": the map builds up tile by
       tile — but the in-play colour moves from yellow (read as "failed") to a
       neutral BLUE. Blue carries no emotional charge.
-    - New requirement: the child must never be forced to answer. A
-      "Weiß nicht" affordance is needed.
-
-  Remaining ⚙ variant (bottom pill / ← →): where "Weiß nicht" lives.
-    1  Eigener Knopf     — a soft button under the keypad, always visible.
-    2  Im ✓-Slot         — the submit key shows "Weiß nicht" while the field is
-                           empty and turns into ✓ as soon as a digit is typed.
+    - The child must never be forced to answer: a "Weiß nicht" affordance.
+      Round 2 offered it as a quiet outlined button under the keypad and as a
+      mode of the ✓ key — both rejected as not clear enough. It is now a
+      SOLID button in the map's in-play blue, sitting between the answer field
+      and the keypad: same colour the child will see on the map for "üben wir",
+      so choosing it reads as "this one goes on the practice pile".
 
   Mechanically "Weiß nicht" is a miss (level 1, counts toward the 6-in-a-row
   mercy stop) — but it is acknowledged exactly as neutrally as any other probe.
 
+  No open variants left — one flow.
+
   Not production code. Do not merge to main.
 -->
 <meta charset="utf-8">
-<title>mulplu – Onboarding-Prototyp (R2)</title>
+<title>mulplu – Onboarding-Prototyp (R3)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
   :root {
@@ -51,19 +52,10 @@
   }
   #chrome button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
   #chrome .lbl { align-self: center; font-weight: 600; }
-  #switcher {
-    position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 10px; z-index: 60;
-    background: #1E2B3A; color: #fff; border-radius: 999px;
-    padding: 7px 12px; box-shadow: 0 6px 18px rgba(30,43,58,.35); font-size: 12px;
-  }
-  #switcher button { background: #35485D; border: 0; color: #fff; border-radius: 999px;
-    width: 24px; height: 24px; cursor: pointer; font-size: 13px; }
-  #switcher .name { min-width: 165px; text-align: center; font-weight: 600; }
   #state { font-size: 10px; color: var(--muted); text-align: center; min-height: 12px; }
 
   /* ---------- app ---------- */
-  #app { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 44px; }
+  #app { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
   .pad { padding: 0 6px; }
   h1 { font-size: 25px; line-height: 1.2; font-weight: 800; }
   h2 { font-size: 19px; font-weight: 800; }
@@ -91,16 +83,14 @@
   #keys button:active { background: #C3D5E8; }
   #keys .sub { background: var(--good); color: #fff; }
   #keys .del { background: #E3EBF3; color: var(--muted); font-size: 20px; }
-  /* ⚙2: same slot, but while the field is empty it is the escape hatch */
-  #keys .dunno { background: #E3EBF3; color: var(--muted); font-size: 13px; font-weight: 700;
-                 line-height: 1.15; }
-  /* ⚙1: its own button under the keypad — deliberately quiet, never a shortcut */
-  #dunnobar { display: flex; justify-content: center; padding: 8px 0 0; }
+  /* "Weiß nicht" — solid, in the map's in-play blue, above the keypad */
+  #dunnobar { display: flex; justify-content: center; padding: 2px 0 12px; }
   #dunnobar button {
-    border: 2px solid #C4D3E2; background: transparent; color: var(--muted);
-    border-radius: 999px; padding: 9px 20px; font-size: 15px; font-weight: 700; cursor: pointer;
+    border: 0; background: var(--tile-play); color: #fff;
+    border-radius: 16px; padding: 13px 30px; font-size: 17px; font-weight: 800;
+    cursor: pointer; box-shadow: 0 5px 0 #3E82B8;
   }
-  #dunnobar button:active { background: #DFE8F1; }
+  #dunnobar button:active { transform: translateY(3px); box-shadow: 0 2px 0 #3E82B8; }
 
   /* progress map (stub of #8/#9) */
   .map { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 100%; }
@@ -157,10 +147,6 @@
   <div id="state"></div>
 </div>
 
-<div id="switcher">
-  <button id="prev">‹</button><span class="name" id="vname"></span><button id="next">›</button>
-</div>
-
 <script>
 /* ---------------- fake domain state ---------------- */
 const ORDER = (() => {                  // stand-in for the frozen admission order
@@ -169,10 +155,6 @@ const ORDER = (() => {                  // stand-in for the frozen admission ord
   return p.sort((x, y) => (x[0] * x[1]) - (y[0] * y[1]));
 })();
 const FRONT = 10;
-
-/* the only thing still open: where "Weiß nicht" lives */
-let variant = new URLSearchParams(location.search).get('variant') || '1';
-const VARIANTS = { 1: 'Eigener Knopf', 2: 'Im ✓-Slot' };
 
 let S;
 function reset(fluency = 0.5, upto = 0) {
@@ -199,7 +181,6 @@ const app = document.getElementById('app');
 const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstElementChild; };
 
 function render() {
-  document.getElementById('vname').textContent = '⚙' + variant + ' — ' + VARIANTS[variant];
   document.querySelectorAll('#chrome [data-scr]').forEach(b => b.classList.toggle('on', b.dataset.scr === S.screen));
   document.querySelectorAll('#chrome [data-fl]').forEach(b => b.classList.toggle('on', +b.dataset.fl === S.fluency));
   app.innerHTML = '';
@@ -255,28 +236,21 @@ function probe() {
     <div id="field">${S.entry || '&nbsp;'}</div>
   </div>`));
 
+  const bar = el('<div id="dunnobar" class="pad"><button>Weiß nicht</button></div>');
+  bar.querySelector('button').onclick = () => dunno();
+  app.appendChild(bar);
+
   const keys = el('<div class="pad"><div id="keys"></div></div>');
   const grid = keys.querySelector('#keys');
   ['1','2','3','4','5','6','7','8','9','del','0','sub'].forEach(k => {
     let cls = '', label = k;
     if (k === 'del') { cls = 'del'; label = '⌫'; }
-    if (k === 'sub') {
-      // ⚙2: the same slot carries the escape hatch until a digit is typed
-      const empty = variant === '2' && !S.entry;
-      cls = empty ? 'dunno' : 'sub';
-      label = empty ? 'Weiß<br>nicht' : '✓';
-    }
+    if (k === 'sub') { cls = 'sub'; label = '✓'; }
     const btn = el(`<button class="${cls}">${label}</button>`);
-    btn.onclick = () => (k === 'sub' && variant === '2' && !S.entry) ? dunno() : key(k, answer);
+    btn.onclick = () => key(k, answer);
     grid.appendChild(btn);
   });
   app.appendChild(keys);
-
-  if (variant === '1') {                 // ⚙1: its own quiet button below
-    const bar = el('<div id="dunnobar" class="pad"><button>Weiß nicht</button></div>');
-    bar.querySelector('button').onclick = () => dunno();
-    app.appendChild(bar);
-  }
 }
 
 function key(k, answer) {
@@ -417,19 +391,6 @@ document.querySelectorAll('#chrome [data-fl]').forEach(b => b.onclick = () => {
 });
 document.querySelectorAll('#chrome [data-at]').forEach(b => b.onclick = () => {
   reset(S.fluency, +b.dataset.at - 1); S.screen = 'probe'; render();
-});
-function cycle(d) {
-  const ks = Object.keys(VARIANTS);
-  variant = ks[(ks.indexOf(variant) + d + ks.length) % ks.length];
-  history.replaceState(null, '', '?variant=' + variant);
-  S.entry = ''; S.locked = false; render();
-}
-document.getElementById('prev').onclick = () => cycle(-1);
-document.getElementById('next').onclick = () => cycle(1);
-addEventListener('keydown', e => {
-  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable) return;
-  if (e.key === 'ArrowLeft') cycle(-1);
-  if (e.key === 'ArrowRight') cycle(1);
 });
 render();
 </script>
