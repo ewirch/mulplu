@@ -196,9 +196,13 @@ than a warning colour on purpose: at cold start 10 of 36 tiles are in play, and 
 warm-coloured area reads as *failed*. (Settled by
 [#14](https://github.com/ewirch/mulplu/issues/14).)
 
-On top of that sits one day overlay, **promoted today**, which resets at midnight. An
-item consolidated today carries both. A demotion carries no overlay: it is visible as a
-change of state, never announced.
+On top of that sits one day overlay, **promoted today**, which resets at midnight and
+marks **any level-up that day**, not only consolidation — on a consolidated tile it sits
+beside the check, on an *in play* tile it stands alone. (Widened by
+[#10](https://github.com/ewirch/mulplu/issues/10): without it, a day spent climbing the
+ladder below level 5 would end on a visibly unmoved map.) It says *that* the item moved,
+not to where — the level stays invisible. A demotion carries no overlay: it is visible
+as a change of state, never announced.
 
 The **level is deliberately invisible** — "in play" spans levels 1 to 4 undifferentiated.
 The only threshold that means anything to the child is *consolidated*. A revoked item is
