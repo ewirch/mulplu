@@ -4,8 +4,9 @@ Vocabulary of the domain. Terms here are the ones used in code, tickets and ADRs
 Settled so far by [#2](https://github.com/ewirch/mulplu/issues/2),
 [#5](https://github.com/ewirch/mulplu/issues/5),
 [#7](https://github.com/ewirch/mulplu/issues/7),
-[#8](https://github.com/ewirch/mulplu/issues/8) and
-[#9](https://github.com/ewirch/mulplu/issues/9).
+[#8](https://github.com/ewirch/mulplu/issues/8),
+[#9](https://github.com/ewirch/mulplu/issues/9) and
+[#14](https://github.com/ewirch/mulplu/issues/14).
 
 ## Item
 
@@ -122,6 +123,34 @@ wrong → **level 1**. Nothing in between — a single untimed probe cannot tell
 from shaky; the ladder sorts that out in normal practice, where a miscalibrated
 "known" is asked daily and revoked on its first wrong counting answer.
 
+The pass is presented in **6 rounds of 6 probes** with a breather between rounds. This
+is the only place a session-like structure exists: the pass has a fixed size and a
+defined end, so chunking changes nothing about what is achieved — only how near the end
+feels. Each probe is acknowledged by a **stamp** in the current round's row, which marks
+that a probe happened and nothing about how it went. A companion figure speaks the
+framing, the mercy stop and the resume greeting; the resume greeting names the **round**,
+not a count. (Settled by [#14](https://github.com/ewirch/mulplu/issues/14).)
+
+## "Weiß nicht"
+
+The child is never forced to guess. Every free-input probe of the calibration offers a
+**"Weiß nicht"** button, visually prominent and carrying the progress map's *in play*
+colour, so choosing it reads as *this item goes on the practice pile* rather than as a
+failure. Mechanically it is a **miss**: the item is seeded level 1 and the press counts
+toward the mercy stop's 6-in-a-row.
+
+Whether the affordance exists outside calibration is open — see
+[#15](https://github.com/ewirch/mulplu/issues/15).
+
+## Reveal
+
+The end of the calibration is where the **progress map** is shown for the first time: its
+36 tiles fill in one by one, then the companion names how many items the child already
+produced. The build-up therefore introduces the map rather than replaying state the child
+has already seen — which is why the map is deliberately *absent* during the pass itself.
+The reveal hands straight over into day 1, and since the probes are day 1's counting
+answers, a fluent child arrives at the day close immediately.
+
 ## Day goal
 
 The **day goal** is reached when every item in the question pool has been answered
@@ -161,6 +190,11 @@ Each item is in exactly one of three states, derived from question-pool membersh
 | **Consolidated** | level 5 |
 | **In play** | in the pool, not consolidated — i.e. the learning front plus every item whose consolidation was revoked |
 | **Not started** | not in the pool |
+
+Consolidated tiles are green, *in play* is **blue** and *not started* is grey. Blue rather
+than a warning colour on purpose: at cold start 10 of 36 tiles are in play, and a large
+warm-coloured area reads as *failed*. (Settled by
+[#14](https://github.com/ewirch/mulplu/issues/14).)
 
 On top of that sits one day overlay, **promoted today**, which resets at midnight. An
 item consolidated today carries both. A demotion carries no overlay: it is visible as a
