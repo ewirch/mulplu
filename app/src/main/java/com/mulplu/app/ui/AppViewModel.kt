@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 
 /** The three screens (ADR-0003: a 3-case sealed class, no Navigation-Compose). */
 sealed interface Screen {
-    /** Home. Placeholder until #21 delivers the real progress map. */
+    /** Home: the progress map. */
     data object Map : Screen
 
     /** First run only. Placeholder scaffold until #22 delivers the real flow. */
@@ -77,11 +77,22 @@ class AppViewModel(
     var soundEvent by mutableStateOf<Pair<Long, Sound>?>(null)
         private set
 
+    /** Bumped when the day goal was just reached — the map animates the day's movements. */
+    var dayCloseTick by mutableStateOf(0L)
+        private set
+
+    /** Bumped when the terminal event (36th consolidation, one-time) must fire on the map. */
+    var terminalTick by mutableStateOf(0L)
+        private set
+
     /** Wrong values given per item today — in-memory only (mvp-spec §12). */
     private val rejectedToday = mutableMapOf<ItemKey, MutableSet<Int>>()
     private var rejectedDate: LocalDate = LocalDate.now()
     private var soundToken = 0L
     private var answering = false
+
+    /** Terminal event waiting for the next map landing (in-memory; the flag itself is `wasEverCompleted`). */
+    private var terminalPending = false
 
     fun startPractice() {
         viewModelScope.launch {
@@ -95,13 +106,19 @@ class AppViewModel(
         questionUi = null
         feedback = null
         answering = false
+        if (terminalPending) {
+            terminalPending = false
+            terminalTick += 1
+        }
     }
 
     /** Temporary probe driver for the #22 placeholder. */
     fun answerCalibrationProbe(correct: Boolean) {
         viewModelScope.launch {
+            var completedBefore = false
             val after = repository.update { state ->
                 if (state.calibrationComplete) return@update state
+                completedBefore = state.wasEverCompleted
                 val item = com.mulplu.app.engine.Ranking.ORDER[state.calibrationIndex]
                 Engine.reduce(
                     state,
@@ -109,7 +126,8 @@ class AppViewModel(
                     LocalDate.now(),
                 )
             }
-            if (after.calibrationComplete) screen = Screen.Map
+            if (!completedBefore && after.wasEverCompleted) terminalPending = true
+            if (after.calibrationComplete) backToMap()
         }
     }
 
@@ -121,7 +139,12 @@ class AppViewModel(
         viewModelScope.launch {
             val item = ui.question.item
             val correct = given == item.product
-            val after = repository.update { Engine.reduce(it, Event.AnswerGiven(item, given), LocalDate.now()) }
+            var completedBefore = false
+            val after = repository.update {
+                completedBefore = it.wasEverCompleted
+                Engine.reduce(it, Event.AnswerGiven(item, given), LocalDate.now())
+            }
+            if (!completedBefore && after.wasEverCompleted) terminalPending = true
             if (!correct && given != null) {
                 rejectedTodayFor(item).add(given)
             }
@@ -150,6 +173,10 @@ class AppViewModel(
         }
         val question = Engine.nextQuestion(state, today, lastShown, random)
         if (question == null) {
+            // Day goal reached: the questions simply cease; the map animates
+            // the day's movements (mvp-spec §10). When the terminal event is
+            // pending it supersedes the day close.
+            if (!terminalPending && lastShown != null) dayCloseTick += 1
             backToMap()
             return
         }
