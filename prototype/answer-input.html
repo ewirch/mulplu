@@ -1,0 +1,445 @@
+<!--
+  PROTOTYPE — throwaway. Answers ticket #6 "Design the answer-input interaction".
+  Single-file interactive prototype of the core loop (task → answer → feedback → next),
+  incl. the crossing from answer buttons (levels 1–3) to free input (levels 4–5).
+  Variants are switchable via the ⚙ panel: button layout, auto-submit rule,
+  feedback timing, tap-to-continue, sound, haptics.
+  Not production code. Do not merge to main.
+-->
+<meta charset="utf-8">
+<title>mulplu – Eingabe-Prototyp</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<style>
+  :root {
+    --bg: #EAF2F8;        /* sky-tinted neutral */
+    --card: #FFFFFF;
+    --ink: #1E2B3A;
+    --muted: #5B6B7C;
+    --accent: #3E6FE0;    /* friendly blue */
+    --good: #2FA866;
+    --bad: #E4574F;
+    --btn-shadow: #C4D3E2;
+    --radius: 22px;
+  }
+  * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink);
+    display: flex; justify-content: center;
+    overscroll-behavior: none;
+  }
+  #phone {
+    width: 100%; max-width: 430px; height: 100dvh;
+    display: flex; flex-direction: column; padding: 12px;
+    user-select: none;
+  }
+
+  /* ---------- prototype chrome (not part of the design) ---------- */
+  #protobar {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--muted); margin-bottom: 6px;
+  }
+  #protobar .tag { background: #D9E4F0; border-radius: 6px; padding: 2px 8px; font-weight: 600; }
+  #protobar button {
+    margin-left: auto; border: 1px solid #C4D3E2; background: #fff; border-radius: 8px;
+    padding: 4px 10px; font-size: 13px; cursor: pointer;
+  }
+  #levelchips { display: flex; gap: 6px; margin-bottom: 6px; }
+  #levelchips button {
+    flex: 1; border: 1px solid #C4D3E2; background: #fff; color: var(--muted);
+    border-radius: 8px; padding: 5px 0; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  #levelchips button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #state { font-size: 11px; color: var(--muted); text-align: center; margin-top: 6px; min-height: 14px; }
+
+  /* ---------- settings panel ---------- */
+  #settings {
+    position: fixed; inset: 0; background: rgba(30,43,58,.45);
+    display: none; align-items: flex-end; justify-content: center; z-index: 50;
+  }
+  #settings.open { display: flex; }
+  #settings .sheet {
+    background: #fff; width: 100%; max-width: 430px; border-radius: 18px 18px 0 0;
+    padding: 18px 18px 28px; max-height: 80dvh; overflow-y: auto;
+  }
+  #settings h2 { font-size: 15px; margin-bottom: 12px; }
+  .setting { margin-bottom: 14px; }
+  .setting .label { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .seg { display: flex; gap: 6px; }
+  .seg button {
+    flex: 1; border: 1px solid #C4D3E2; background: #fff; border-radius: 8px;
+    padding: 7px 4px; font-size: 12px; cursor: pointer; color: var(--muted);
+  }
+  .seg button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ---------- the app being prototyped ---------- */
+  #task {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 10px;
+  }
+  #question {
+    font-size: clamp(56px, 18vw, 84px); font-weight: 800; letter-spacing: .02em;
+    font-variant-numeric: tabular-nums;
+  }
+  #verdict { font-size: 17px; font-weight: 600; min-height: 48px; text-align: center; }
+  #verdict .big { display: block; font-size: clamp(40px, 13vw, 60px); font-weight: 800; }
+  #verdict.good { color: var(--good); }
+  #verdict.bad  { color: var(--bad); }
+  #again { font-size: 13px; color: var(--muted); font-weight: 400; margin-top: 4px; }
+
+  #answers { padding-bottom: 8px; }
+
+  /* multiple choice */
+  #choices { display: grid; gap: 14px; }
+  #choices.fixed  { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; height: 42dvh; }
+  #choices.reflow { grid-auto-rows: 1fr; }
+  #choices.reflow.n2 { grid-template-columns: 1fr 1fr; height: 21dvh; }
+  #choices.reflow.n3 { grid-template-columns: 1fr 1fr 1fr; height: 21dvh; }
+  #choices.reflow.n4 { grid-template-columns: 1fr 1fr; height: 42dvh; }
+  .choice {
+    border: 0; border-radius: var(--radius); background: var(--card); color: var(--ink);
+    font-size: clamp(30px, 9vw, 44px); font-weight: 800; font-variant-numeric: tabular-nums;
+    box-shadow: 0 6px 0 var(--btn-shadow); cursor: pointer;
+    transition: opacity .35s, transform .1s, background .2s, box-shadow .1s;
+  }
+  .choice:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--btn-shadow); }
+  .choice.correct { background: var(--good); color: #fff; box-shadow: 0 6px 0 #22824E; }
+  .choice.wrongpick { background: var(--bad); color: #fff; box-shadow: 0 6px 0 #B03A34; }
+  .choice.gone { opacity: 0; pointer-events: none; }
+  .choice.empty { visibility: hidden; }
+
+  /* free input */
+  #freewrap { display: none; }
+  #entry {
+    text-align: center; font-size: clamp(38px, 12vw, 54px); font-weight: 800;
+    min-height: 60px; letter-spacing: .06em; font-variant-numeric: tabular-nums;
+  }
+  #entry .cursor { color: var(--accent); animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  #keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; height: 40dvh; }
+  .key {
+    border: 0; border-radius: 16px; background: var(--card); color: var(--ink);
+    font-size: clamp(24px, 7vw, 34px); font-weight: 700;
+    box-shadow: 0 5px 0 var(--btn-shadow); cursor: pointer;
+    transition: transform .08s, box-shadow .08s;
+  }
+  .key:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--btn-shadow); }
+  .key.ok { background: var(--good); color: #fff; box-shadow: 0 5px 0 #22824E; }
+  .key.del { font-size: clamp(20px, 6vw, 28px); color: var(--muted); }
+  .key:disabled { opacity: .4; }
+
+  /* continue button after wrong answer */
+  #continue {
+    display: none; width: 100%; border: 0; border-radius: var(--radius);
+    background: var(--accent); color: #fff; font-size: 20px; font-weight: 700;
+    padding: 16px; box-shadow: 0 6px 0 #2A4FA8; cursor: pointer; margin-top: 10px;
+  }
+  #continue:active { transform: translateY(4px); box-shadow: 0 2px 0 #2A4FA8; }
+
+  /* sparks */
+  .spark {
+    position: fixed; width: 10px; height: 10px; border-radius: 50%;
+    pointer-events: none; z-index: 40;
+  }
+  @media (prefers-reduced-motion: reduce) { .spark { display: none; } }
+</style>
+
+<div id="phone">
+  <div id="protobar">
+    <span class="tag">PROTOTYP</span>
+    <span id="protoinfo"></span>
+    <button id="gear">⚙ Varianten</button>
+  </div>
+  <div id="levelchips"></div>
+
+  <div id="task">
+    <div id="question"></div>
+    <div id="verdict"></div>
+  </div>
+
+  <div id="answers">
+    <div id="choices"></div>
+    <div id="freewrap">
+      <div id="entry"></div>
+      <div id="keypad"></div>
+    </div>
+    <button id="continue">Weiter</button>
+  </div>
+  <div id="state"></div>
+</div>
+
+<div id="settings"><div class="sheet">
+  <h2>Prototyp-Varianten</h2>
+  <div class="setting"><div class="label">Button-Layout (Level 1–3)</div>
+    <div class="seg" data-key="layout">
+      <button data-v="fixed">Feste 2×2-Plätze</button>
+      <button data-v="reflow">Passt sich der Anzahl an</button>
+    </div></div>
+  <div class="setting"><div class="label">Freie Eingabe: Abschicken</div>
+    <div class="seg" data-key="submit">
+      <button data-v="confirm">Haken-Taste (explizit)</button>
+      <button data-v="auto">Automatisch bei voller Stellenzahl</button>
+    </div></div>
+  <div class="setting"><div class="label">Nach falscher Antwort</div>
+    <div class="seg" data-key="wrongCont">
+      <button data-v="tap">„Weiter“ antippen</button>
+      <button data-v="auto">Geht von selbst weiter</button>
+    </div></div>
+  <div class="setting"><div class="label">Tempo des Feedbacks</div>
+    <div class="seg" data-key="speed">
+      <button data-v="fast">Schnell</button>
+      <button data-v="normal">Normal</button>
+      <button data-v="slow">Langsam</button>
+    </div></div>
+  <div class="setting"><div class="label">Sound</div>
+    <div class="seg" data-key="sound">
+      <button data-v="on">An</button>
+      <button data-v="off">Aus</button>
+    </div></div>
+  <div class="setting"><div class="label">Vibration (nur Android)</div>
+    <div class="seg" data-key="haptics">
+      <button data-v="wrong">Nur bei falsch</button>
+      <button data-v="both">Richtig & falsch</button>
+      <button data-v="off">Aus</button>
+    </div></div>
+  <div class="setting"><button class="seg-close" id="closeSettings" style="width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer">Fertig</button></div>
+</div></div>
+
+<script>
+'use strict';
+// ------- config (the variants under discussion) -------
+const cfg = {
+  layout: 'fixed',      // fixed | reflow
+  submit: 'confirm',    // confirm | auto
+  wrongCont: 'tap',     // tap | auto
+  speed: 'normal',      // fast | normal | slow
+  sound: 'on',
+  haptics: 'wrong',
+};
+const SPEED = {
+  fast:   { good: 550,  wrong: 1800 },
+  normal: { good: 900,  wrong: 2800 },
+  slow:   { good: 1400, wrong: 4000 },
+};
+
+// ------- domain: 36 items, level per item -------
+const items = [];
+for (let a = 2; a <= 9; a++) for (let b = a; b <= 9; b++) items.push({ a, b, level: 1 });
+const allProducts = [...new Set(items.map(i => i.a * i.b))];
+
+let current = null, locked = false, entry = '', level = 1;
+
+function pickItem() {
+  let it;
+  do { it = items[Math.floor(Math.random() * items.length)]; }
+  while (items.length > 1 && it === current);
+  return it;
+}
+// distractors: neighbourhood products of the table, prefer shared factor, redraw each time
+function distractors(it, n) {
+  const correct = it.a * it.b;
+  const shared = [], other = [];
+  for (const j of items) {
+    const p = j.a * j.b;
+    if (p === correct) continue;
+    (j.a === it.a || j.a === it.b || j.b === it.a || j.b === it.b ? shared : other).push(p);
+  }
+  const pool = [...new Set(shared)].sort((x, y) => Math.abs(x - correct) - Math.abs(y - correct)).slice(0, 8);
+  const rest = [...new Set(other)].sort((x, y) => Math.abs(x - correct) - Math.abs(y - correct));
+  const out = new Set();
+  while (out.size < n) {
+    const src = pool.length ? pool : rest;
+    const idx = Math.floor(Math.random() * src.length);
+    out.add(src.splice(idx, 1)[0]);
+  }
+  return [...out];
+}
+
+// ------- sound & haptics -------
+let audioCtx;
+function beep(kind) {
+  if (cfg.sound !== 'on') return;
+  audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+  const t = audioCtx.currentTime;
+  const play = (freq, start, dur, type = 'sine', gain = .18) => {
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, t + start);
+    g.gain.exponentialRampToValueAtTime(.001, t + start + dur);
+    o.connect(g).connect(audioCtx.destination);
+    o.start(t + start); o.stop(t + start + dur);
+  };
+  if (kind === 'good') { play(660, 0, .12); play(880, .1, .2); }
+  else { play(180, 0, .25, 'triangle', .12); }
+}
+function buzz(kind) {
+  if (!navigator.vibrate || cfg.haptics === 'off') return;
+  if (kind === 'wrong') navigator.vibrate([60, 40, 60]);
+  else if (cfg.haptics === 'both') navigator.vibrate(25);
+}
+
+// ------- sparks -------
+function sparks(x, y) {
+  const colors = ['#3E6FE0', '#2FA866', '#F5A623', '#E4574F', '#9B59B6'];
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('div');
+    s.className = 'spark';
+    s.style.background = colors[i % colors.length];
+    s.style.left = x + 'px'; s.style.top = y + 'px';
+    document.body.appendChild(s);
+    const ang = Math.random() * Math.PI * 2, dist = 50 + Math.random() * 90;
+    s.animate([
+      { transform: 'translate(0,0) scale(1)', opacity: 1 },
+      { transform: `translate(${Math.cos(ang) * dist}px, ${Math.sin(ang) * dist - 30}px) scale(.2)`, opacity: 0 },
+    ], { duration: 600 + Math.random() * 300, easing: 'cubic-bezier(.2,.6,.4,1)' }).onfinish = () => s.remove();
+  }
+}
+
+// ------- rendering -------
+const $ = id => document.getElementById(id);
+function renderTask() {
+  locked = false; entry = '';
+  current = pickItem();
+  current.level = level;
+  const flip = Math.random() < .5;
+  $('question').textContent = flip ? `${current.b} × ${current.a}` : `${current.a} × ${current.b}`;
+  $('verdict').textContent = ''; $('verdict').className = '';
+  $('continue').style.display = 'none';
+
+  const free = level >= 4;
+  $('freewrap').style.display = free ? 'block' : 'none';
+  $('choices').style.display = free ? 'none' : 'grid';
+  if (free) renderKeypad(); else renderChoices();
+  renderState();
+}
+function renderChoices() {
+  const n = level + 1; // level 1→2, 2→3, 3→4 buttons
+  const correct = current.a * current.b;
+  const opts = [...distractors(current, n - 1), correct].sort(() => Math.random() - .5);
+  const c = $('choices');
+  c.className = cfg.layout === 'fixed' ? 'fixed' : `reflow n${n}`;
+  c.innerHTML = '';
+  // fixed layout: 4 stable slots, options fill bottom row first so 2 buttons sit thumb-near
+  const slots = cfg.layout === 'fixed' ? 4 : n;
+  const order = cfg.layout === 'fixed' ? [2, 3, 0, 1].slice(0, n) : opts.map((_, i) => i);
+  const bySlot = new Array(slots).fill(null);
+  opts.forEach((v, i) => bySlot[cfg.layout === 'fixed' ? order[i] : i] = v);
+  bySlot.forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'choice' + (v === null ? ' empty' : '');
+    if (v !== null) {
+      b.textContent = v;
+      b.onclick = e => answer(v, b, e);
+    }
+    c.appendChild(b);
+  });
+}
+function renderKeypad() {
+  $('entry').innerHTML = '<span class="cursor">_</span>';
+  const kp = $('keypad'); kp.innerHTML = '';
+  const keys = ['1','2','3','4','5','6','7','8','9', 'del', '0', 'ok'];
+  keys.forEach(k => {
+    const b = document.createElement('button');
+    b.className = 'key' + (k === 'ok' ? ' ok' : k === 'del' ? ' del' : '');
+    b.textContent = k === 'del' ? '⌫' : k === 'ok' ? '✓' : k;
+    if (k === 'ok' && cfg.submit === 'auto') b.style.visibility = 'hidden';
+    b.onclick = e => key(k, e);
+    kp.appendChild(b);
+  });
+}
+function renderEntry() {
+  $('entry').innerHTML = (entry || '') + '<span class="cursor">_</span>';
+}
+function key(k, e) {
+  if (locked) return;
+  if (k === 'del') { entry = entry.slice(0, -1); renderEntry(); return; }
+  if (k === 'ok') { if (entry) answer(parseInt(entry, 10), null, e); return; }
+  if (entry.length >= 2) return;
+  entry += k; renderEntry();
+  // auto-submit rule: submit when the digit count matches the correct answer's digit count.
+  // (Never on fewer digits — for 7×8 a first digit "5" is a complete answer to other items.)
+  if (cfg.submit === 'auto' && entry.length === String(current.a * current.b).length) {
+    setTimeout(() => answer(parseInt(entry, 10), null, e), 120);
+  }
+}
+
+// ------- the loop -------
+function answer(v, btn, e) {
+  if (locked) return; locked = true;
+  const correct = current.a * current.b;
+  const good = v === correct;
+  const T = SPEED[cfg.speed];
+  if (good) {
+    beep('good'); buzz('good');
+    if (btn) {
+      btn.classList.add('correct');
+      const r = btn.getBoundingClientRect();
+      sparks(r.left + r.width / 2, r.top + r.height / 2);
+    } else {
+      const r = $('entry').getBoundingClientRect();
+      sparks(r.left + r.width / 2, r.top + r.height / 2);
+      $('verdict').className = 'good';
+      $('verdict').textContent = 'Richtig!';
+    }
+    setLevel(Math.min(5, level + 1), false);
+    setTimeout(renderTask, T.good);
+  } else {
+    beep('wrong'); buzz('wrong');
+    if (btn) {
+      btn.classList.add('wrongpick');
+      // all wrong options disappear, the correct one stays and lights up
+      [...document.querySelectorAll('.choice')].forEach(b => {
+        if (b === btn || b.classList.contains('empty')) return;
+        if (parseInt(b.textContent, 10) === correct) b.classList.add('correct');
+        else b.classList.add('gone');
+      });
+      $('verdict').className = 'bad';
+      $('verdict').innerHTML = `<span id="again">Die kommt gleich nochmal – dann leichter.</span>`;
+    } else {
+      $('verdict').className = 'bad';
+      $('verdict').innerHTML =
+        `<s>${entry}</s><span class="big" style="color:var(--good)">${correct}</span>` +
+        `<span id="again">Die kommt gleich nochmal – dann leichter.</span>`;
+    }
+    setLevel(Math.max(1, level - 1), false);
+    if (cfg.wrongCont === 'tap') $('continue').style.display = 'block';
+    else setTimeout(renderTask, T.wrong);
+  }
+}
+$('continue').onclick = renderTask;
+
+// ------- prototype chrome -------
+function setLevel(l, rerender = true) {
+  level = l;
+  [...$('levelchips').children].forEach((b, i) => b.classList.toggle('on', i + 1 === l));
+  if (rerender) renderTask();
+}
+for (let l = 1; l <= 5; l++) {
+  const b = document.createElement('button');
+  b.textContent = l <= 3 ? `L${l} · ${l + 1} Tasten` : l === 4 ? 'L4 · frei' : 'L5 · fest';
+  b.onclick = () => setLevel(l);
+  $('levelchips').appendChild(b);
+}
+function renderState() {
+  $('state').textContent =
+    `Aufgabe ${current.a}×${current.b} · Level ${level} · ` +
+    `Layout: ${cfg.layout === 'fixed' ? 'fest' : 'fließend'} · ` +
+    `Submit: ${cfg.submit === 'auto' ? 'auto' : 'Haken'} · Tempo: ${cfg.speed}`;
+}
+$('gear').onclick = () => $('settings').classList.add('open');
+$('closeSettings').onclick = () => { $('settings').classList.remove('open'); renderTask(); };
+document.querySelectorAll('.seg').forEach(seg => {
+  const k = seg.dataset.key;
+  [...seg.children].forEach(b => {
+    b.classList.toggle('on', b.dataset.v === cfg[k]);
+    b.onclick = () => {
+      cfg[k] = b.dataset.v;
+      [...seg.children].forEach(x => x.classList.toggle('on', x === b));
+    };
+  });
+});
+
+setLevel(1, false);
+renderTask();
+</script>
