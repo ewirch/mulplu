@@ -2,8 +2,9 @@
 
 Vocabulary of the domain. Terms here are the ones used in code, tickets and ADRs.
 Settled so far by [#2](https://github.com/ewirch/mulplu/issues/2),
-[#5](https://github.com/ewirch/mulplu/issues/5) and
-[#7](https://github.com/ewirch/mulplu/issues/7).
+[#5](https://github.com/ewirch/mulplu/issues/5),
+[#7](https://github.com/ewirch/mulplu/issues/7) and
+[#8](https://github.com/ewirch/mulplu/issues/8).
 
 ## Item
 
@@ -131,8 +132,39 @@ it is the only one left. An item admitted part-way through a day counts as satis
 for that day and first becomes due the next day — so the day goal, once seen, does not
 recede while the child works.
 
+The day goal is also the **only** boundary of a go: reaching it ends the day's
+questioning outright, and there is nothing to do in the app until the next day. How far
+along the day is, is visible while the child works, and it is *monotone* — it counts
+satisfied items, so a wrong answer slows progress but never takes it back.
+
+The current day is read each time a question is presented, and nowhere else. A day
+boundary crossed mid-play therefore applies immediately.
+
 What the child gets for reaching it is gamification, not domain — see
 [#9](https://github.com/ewirch/mulplu/issues/9).
+
+## Progress map
+
+The persistent picture of where every one of the 36 items stands: which are
+consolidated, which are in the learning front, which have not been started. It is both
+the app's home and its day-end report — at the close of a day it also marks the
+movements that day produced.
+
+It reports *movement*, never a score: there is no point total, no error count and no
+comparison against previous days. A miss is not damage in this domain but the trigger
+of a helpful move, so counting misses would frame as loss what the system treats as
+adjustment.
+
+## Completion
+
+All 36 items consolidated. A one-time event: an item revoked and re-consolidated later
+does not produce it again.
+
+Completion changes nothing about how the app behaves. The pool is all 36, the learning
+front is empty, and the day goal stays "all 36 answered correctly today" — at free
+input, indefinitely, because forgetting is measured rather than estimated. There is no
+reduced end-state load: choosing a subset to ask would be a scheduler, which
+[#5](https://github.com/ewirch/mulplu/issues/5) rejected in favour of the day goal.
 
 ## Distractor
 
@@ -149,3 +181,9 @@ the difficulty, never their plausibility, which is uniform across levels.
 
 **Nothing is timed.** No countdown, no response-time measurement, no personal-best
 time, no time pressure of any kind. Correctness is the only signal the app records.
+
+**There is no session.** The day is the only unit. A go has no length of its own — no
+item count, no clock, no stop-at-first-mistake — so there is nothing to resume, count
+partially or discard. State is per item plus a date; leaving is always free and costs
+nothing. (Calibration is the one exception and carries its own resume rule.) There is
+likewise only one mode: no practice mode alongside the day goal, and no challenge mode.
