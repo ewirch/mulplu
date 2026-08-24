@@ -1,39 +1,35 @@
 <!--
   PROTOTYPE — throwaway. Answers ticket #14 "Prototype the first-run onboarding
-  around calibration" (map #1). Round 1.
+  around calibration" (map #1). Round 2, after dev feedback on round 1.
 
-  Question: what does the child SEE during the first-run calibration pass?
-  Mechanics are fixed by #7 (36 probes, free input, admission order, neutral
-  feedback, mercy stop after 6 straight misses, probe = day-1 counting answer)
-  and #6 (keypad, explicit ✓ submit). Only the framing, the neutral
-  acknowledgment, the reveal, the hand-over and the resume greeting are open.
+  Settled in round 1:
+    - Intro, probe, mercy stop, day close and resume greeting come from variant
+      C "Etappen": friendly companion, 6 rounds of 6, small bites.
+    - The reveal comes from variant B "Landkarte": the map builds up tile by
+      tile — but the in-play colour moves from yellow (read as "failed") to a
+      neutral BLUE. Blue carries no emotional charge.
+    - New requirement: the child must never be forced to answer. A
+      "Weiß nicht" affordance is needed.
 
-  Three structurally different variants, switchable in the floating bottom bar
-  (or ← / → keys):
-    A  Stiller Test      — probes on a bare screen, one thin monotone bar,
-                           map appears only at the end as a reveal.
-    B  Landkarte         — the progress map IS the screen from second one;
-                           each probe fills its tile neutrally, the end flips
-                           the tiles to their true state. Indicator = map.
-    C  Etappen           — 6 rounds of 6 with a companion voice, a stamped row
-                           per round, breather between rounds, explicit
-                           hand-over into the day goal.
+  Remaining ⚙ variant (bottom pill / ← →): where "Weiß nicht" lives.
+    1  Eigener Knopf     — a soft button under the keypad, always visible.
+    2  Im ✓-Slot         — the submit key shows "Weiß nicht" while the field is
+                           empty and turns into ✓ as soon as a digit is typed.
 
-  Proto chrome (grey, not part of the design): screen jumps, and a "kann schon"
-  dial that fakes how fluent the child is so the reveal / day-close can be seen
-  in all three shapes.
+  Mechanically "Weiß nicht" is a miss (level 1, counts toward the 6-in-a-row
+  mercy stop) — but it is acknowledged exactly as neutrally as any other probe.
 
   Not production code. Do not merge to main.
 -->
 <meta charset="utf-8">
-<title>mulplu – Onboarding-Prototyp</title>
+<title>mulplu – Onboarding-Prototyp (R2)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <style>
   :root {
     --bg: #EAF2F8; --card: #FFFFFF; --ink: #1E2B3A; --muted: #5B6B7C;
     --accent: #3E6FE0; --good: #2FA866; --bad: #E4574F;
     --btn-shadow: #C4D3E2; --key-bg: #D8E4F1;
-    --tile-none: #D5E0EB; --tile-play: #F2C14E; --tile-done: #2FA866;
+    --tile-none: #D5E0EB; --tile-play: #5BA3D9; --tile-done: #2FA866;
     --radius: 22px;
   }
   * { box-sizing: border-box; margin: 0; -webkit-tap-highlight-color: transparent; }
@@ -63,65 +59,65 @@
   }
   #switcher button { background: #35485D; border: 0; color: #fff; border-radius: 999px;
     width: 24px; height: 24px; cursor: pointer; font-size: 13px; }
-  #switcher .name { min-width: 150px; text-align: center; font-weight: 600; }
+  #switcher .name { min-width: 165px; text-align: center; font-weight: 600; }
   #state { font-size: 10px; color: var(--muted); text-align: center; min-height: 12px; }
 
-  /* ---------- shared app bits ---------- */
+  /* ---------- app ---------- */
   #app { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 44px; }
   .pad { padding: 0 6px; }
   h1 { font-size: 25px; line-height: 1.2; font-weight: 800; }
-  h2 { font-size: 18px; font-weight: 800; }
+  h2 { font-size: 19px; font-weight: 800; }
   p.body { font-size: 15px; color: var(--muted); line-height: 1.45; }
   .center { flex: 1; display: flex; flex-direction: column; align-items: center;
-            justify-content: center; gap: 16px; text-align: center; }
+            justify-content: center; gap: 10px; text-align: center; }
   .cta {
     border: 0; border-radius: 16px; background: var(--accent); color: #fff;
     font-size: 18px; font-weight: 800; padding: 15px 26px; cursor: pointer;
     box-shadow: 0 5px 0 #2A54B4;
   }
   .cta:active { transform: translateY(3px); box-shadow: 0 2px 0 #2A54B4; }
-  .ghost { background: none; border: 0; color: var(--muted); font-size: 14px;
-           text-decoration: underline; cursor: pointer; }
+  .buddy { font-size: 40px; }
 
-  /* question + free input (vocabulary from #6) */
-  #q { font-size: clamp(48px, 16vw, 76px); font-weight: 800; font-variant-numeric: tabular-nums; }
+  /* question + free input (#6 vocabulary) */
+  #q { font-size: clamp(40px, 13vw, 62px); font-weight: 800; font-variant-numeric: tabular-nums; }
   #field { background: #fff; border: 3px solid var(--accent); border-radius: 14px;
-    min-height: 62px; width: 62%; display: flex; align-items: center; justify-content: center;
+    min-height: 54px; width: 62%; display: flex; align-items: center; justify-content: center;
     font-size: clamp(32px, 10vw, 44px); font-weight: 800; font-variant-numeric: tabular-nums; }
-  #field.flash { border-color: var(--bad); color: var(--bad); }
-  #field.ok { border-color: var(--good); color: var(--good); }
-  #keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; width: 100%; }
+  #keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
   #keys button {
     border: 0; background: var(--key-bg); color: var(--ink); border-radius: 999px;
-    aspect-ratio: 1.55; font-size: 26px; font-weight: 800; cursor: pointer;
+    aspect-ratio: 1.9; font-size: 25px; font-weight: 800; cursor: pointer;
   }
   #keys button:active { background: #C3D5E8; }
   #keys .sub { background: var(--good); color: #fff; }
   #keys .del { background: #E3EBF3; color: var(--muted); font-size: 20px; }
+  /* ⚙2: same slot, but while the field is empty it is the escape hatch */
+  #keys .dunno { background: #E3EBF3; color: var(--muted); font-size: 13px; font-weight: 700;
+                 line-height: 1.15; }
+  /* ⚙1: its own button under the keypad — deliberately quiet, never a shortcut */
+  #dunnobar { display: flex; justify-content: center; padding: 8px 0 0; }
+  #dunnobar button {
+    border: 2px solid #C4D3E2; background: transparent; color: var(--muted);
+    border-radius: 999px; padding: 9px 20px; font-size: 15px; font-weight: 700; cursor: pointer;
+  }
+  #dunnobar button:active { background: #DFE8F1; }
 
   /* progress map (stub of #8/#9) */
   .map { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; width: 100%; }
+  .map.mini { grid-template-columns: repeat(12, 1fr); gap: 4px; }
+  .map.mini .tile { font-size: 0; border-radius: 5px; }
   .tile { aspect-ratio: 1; border-radius: 9px; background: var(--tile-none);
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; color: #7B8B9C; transition: background .35s, transform .35s; }
   .tile.probed { background: #B9C9D9; color: #566575; }
   .tile.done { background: var(--tile-done); color: #fff; }
-  .tile.play { background: var(--tile-play); color: #6A4E06; }
+  .tile.play { background: var(--tile-play); color: #fff; }
   .tile.pop { transform: scale(1.18); }
-  .tile.cur { outline: 3px solid var(--accent); outline-offset: 1px; }
-  /* B while probing: the map has to share the screen with question + keypad,
-     so the tiles shrink and drop their labels */
-  .map.mini { grid-template-columns: repeat(12, 1fr); gap: 4px; }
-  .map.mini .tile { font-size: 0; border-radius: 5px; }
   .legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); flex-wrap: wrap;
             justify-content: center; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; }
 
-  /* A: thin monotone bar */
-  .barwrap { height: 8px; background: #D5E0EB; border-radius: 999px; overflow: hidden; }
-  .bar { height: 100%; background: var(--accent); width: 0; transition: width .35s; }
-
-  /* C: stage rows */
+  /* stage chrome (from C) */
   .stagehdr { display: flex; align-items: baseline; gap: 8px; }
   .stagehdr .big { font-size: 20px; font-weight: 800; }
   .stamps { display: flex; gap: 8px; justify-content: center; }
@@ -133,7 +129,6 @@
   .dots { display: flex; gap: 4px; justify-content: center; }
   .dots span { width: 7px; height: 7px; border-radius: 999px; background: #D5E0EB; }
   .dots span.on { background: var(--accent); }
-  .buddy { font-size: 40px; }
 </style>
 
 <div id="phone">
@@ -168,23 +163,23 @@
 
 <script>
 /* ---------------- fake domain state ---------------- */
-// admission order, small products & shortcut families first (stand-in for the frozen list)
-const ORDER = (() => {
+const ORDER = (() => {                  // stand-in for the frozen admission order
   const p = [];
   for (let a = 2; a <= 9; a++) for (let b = a; b <= 9; b++) p.push([a, b]);
   return p.sort((x, y) => (x[0] * x[1]) - (y[0] * y[1]));
-})();                                   // 36 items
+})();
 const FRONT = 10;
 
-let variant = new URLSearchParams(location.search).get('variant') || 'A';
-const VARIANTS = { A: 'Stiller Test', B: 'Landkarte', C: 'Etappen' };
+/* the only thing still open: where "Weiß nicht" lives */
+let variant = new URLSearchParams(location.search).get('variant') || '1';
+const VARIANTS = { 1: 'Eigener Knopf', 2: 'Im ✓-Slot' };
 
 let S;
 function reset(fluency = 0.5, upto = 0) {
   S = {
     screen: 'intro', idx: 0, fluency,
-    res: ORDER.map(() => null),          // null = unprobed, true/false = probe result
-    miss: 0, mercy: false, entry: '', locked: false,
+    res: ORDER.map(() => null),          // null unprobed | true | false | 'dunno'
+    miss: 0, entry: '', locked: false, dunnos: 0,
   };
   for (let i = 0; i < upto; i++) { S.res[i] = Math.random() < fluency; S.idx = i + 1; }
 }
@@ -193,8 +188,7 @@ reset();
 const probed = () => S.res.filter(r => r !== null).length;
 const known  = () => S.res.filter(r => r === true).length;
 
-/* item state after calibration, per #7: correct -> level 5, else level 1 */
-function tileState(i) {
+function tileState(i) {                  // #7: correct -> level 5, else level 1
   if (S.res[i] === true) return 'done';
   const frontIdx = ORDER.map((_, j) => j).filter(j => S.res[j] !== true).indexOf(i);
   return frontIdx > -1 && frontIdx < FRONT ? 'play' : 'none';
@@ -205,22 +199,21 @@ const app = document.getElementById('app');
 const el = (h) => { const d = document.createElement('div'); d.innerHTML = h.trim(); return d.firstElementChild; };
 
 function render() {
-  document.getElementById('vname').textContent = variant + ' — ' + VARIANTS[variant];
+  document.getElementById('vname').textContent = '⚙' + variant + ' — ' + VARIANTS[variant];
   document.querySelectorAll('#chrome [data-scr]').forEach(b => b.classList.toggle('on', b.dataset.scr === S.screen));
   document.querySelectorAll('#chrome [data-fl]').forEach(b => b.classList.toggle('on', +b.dataset.fl === S.fluency));
   app.innerHTML = '';
   ({ intro, probe, mercy, reveal, day, resume })[S.screen]();
   document.getElementById('state').textContent =
-    `screen=${S.screen} · probed=${probed()}/36 · richtig=${known()} · Fehlserie=${S.miss}`;
+    `${S.screen} · geprüft=${probed()}/36 · richtig=${known()} · "weiß nicht"=${S.dunnos} · Fehlserie=${S.miss}`;
 }
 
-function mapEl(mode, mini) {     // mode: 'neutral' (during calibration) | 'true'
+function mapEl(mode, mini) {
   const m = el(`<div class="map${mini ? ' mini' : ''}"></div>`);
   ORDER.forEach(([a, b], i) => {
     const t = el(`<div class="tile">${a}·${b}</div>`);
     if (mode === 'true') t.classList.add(tileState(i));
     else if (S.res[i] !== null) t.classList.add('probed');
-    if (mode === 'neutral' && i === S.idx) t.classList.add('cur');
     m.appendChild(t);
   });
   return m;
@@ -230,22 +223,17 @@ const legendEl = () => el(`<div class="legend">
   <span><i style="background:var(--tile-play)"></i>üben wir</span>
   <span><i style="background:var(--tile-none)"></i>später</span></div>`);
 
-/* ---------------- screens ---------------- */
+/* ---------------- screens (all from C "Etappen") ---------------- */
 function intro() {
-  const copy = {
-    A: `<h1>Zeig mal, was du schon kannst.</h1>
-        <p class="body">36 Aufgaben, eine nach der anderen.<br>Kein Test, keine Note.
-        Was du nicht weißt, üben wir später zusammen.</p>`,
-    B: `<h1>Das ist deine Karte.</h1>
-        <p class="body">36 Felder – für jede Aufgabe eins.<br>
-        Wir gehen sie einmal durch, dann weiß die Karte, wo du stehst.</p>`,
-    C: `<h1>Hallo! Ich bin dabei.</h1>
-        <p class="body">Wir schauen zusammen, was du schon kannst –
-        <b>6 Runden mit 6 Aufgaben</b>. Dauert nur ein paar Minuten.</p>`,
-  }[variant];
-  const c = el(`<div class="center pad">${variant === 'C' ? '<div class="buddy">🦊</div>' : ''}${copy}</div>`);
-  if (variant === 'B') { const m = mapEl('neutral'); m.style.opacity = .55; c.appendChild(m); }
-  c.appendChild(el(`<button class="cta">${{ A: 'Los', B: 'Karte füllen', C: 'Runde 1 starten' }[variant]}</button>`));
+  const c = el(`<div class="center pad">
+    <div class="buddy">🦊</div>
+    <h1>Hallo! Ich bin dabei.</h1>
+    <p class="body">Wir schauen zusammen, was du schon kannst –
+      <b>6 Runden mit 6 Aufgaben</b>. Dauert nur ein paar Minuten.</p>
+    <p class="body">Wenn du eine Antwort nicht weißt, ist das völlig okay –
+      dann sag einfach <b>„Weiß nicht“</b>.</p>
+  </div>`);
+  c.appendChild(el('<button class="cta">Runde 1 starten</button>'));
   c.querySelector('.cta').onclick = () => { S.screen = 'probe'; render(); };
   app.appendChild(c);
 }
@@ -253,46 +241,42 @@ function intro() {
 function probe() {
   if (S.idx >= 36) { S.screen = 'reveal'; return render(); }
   const [a, b] = ORDER[S.idx], answer = a * b;
+  const round = Math.floor(S.idx / 6) + 1, inRound = S.idx % 6;
 
-  /* --- per-variant progress surface (this is the design question) --- */
-  if (variant === 'A') {
-    const top = el(`<div class="pad" style="padding-top:6px">
-      <div class="barwrap"><div class="bar" style="width:${probed() / 36 * 100}%"></div></div>
-      <div style="font-size:12px;color:var(--muted);text-align:right;margin-top:5px">
-        ${probed()} von 36</div></div>`);
-    app.appendChild(top);
-  }
-  if (variant === 'B') {
-    const top = el('<div class="pad" style="padding-top:4px"></div>');
-    top.appendChild(mapEl('neutral', true));
-    app.appendChild(top);
-  }
-  if (variant === 'C') {
-    const round = Math.floor(S.idx / 6) + 1, inRound = S.idx % 6;
-    const top = el(`<div class="pad" style="padding-top:6px">
-      <div class="stagehdr"><span class="big">Runde ${round}</span>
-        <span style="font-size:13px;color:var(--muted)">von 6</span></div>
-      <div class="stamps" style="margin-top:10px">${
-        [0,1,2,3,4,5].map(k => `<div class="stamp ${k < inRound ? 'set' : ''}">✓</div>`).join('')}</div>
-    </div>`);
-    app.appendChild(top);
-  }
+  app.appendChild(el(`<div class="pad" style="padding-top:6px">
+    <div class="stagehdr"><span class="big">Runde ${round}</span>
+      <span style="font-size:13px;color:var(--muted)">von 6</span></div>
+    <div class="stamps" style="margin-top:10px">${
+      [0,1,2,3,4,5].map(k => `<div class="stamp ${k < inRound ? 'set' : ''}">✓</div>`).join('')}</div>
+  </div>`));
 
-  const c = el(`<div class="center pad">
+  app.appendChild(el(`<div class="center pad">
     <div id="q">${a} × ${b}</div>
     <div id="field">${S.entry || '&nbsp;'}</div>
-  </div>`);
-  app.appendChild(c);
+  </div>`));
 
   const keys = el('<div class="pad"><div id="keys"></div></div>');
   const grid = keys.querySelector('#keys');
   ['1','2','3','4','5','6','7','8','9','del','0','sub'].forEach(k => {
-    const btn = el(`<button class="${k === 'sub' ? 'sub' : k === 'del' ? 'del' : ''}">${
-      k === 'sub' ? '✓' : k === 'del' ? '⌫' : k}</button>`);
-    btn.onclick = () => key(k, answer);
+    let cls = '', label = k;
+    if (k === 'del') { cls = 'del'; label = '⌫'; }
+    if (k === 'sub') {
+      // ⚙2: the same slot carries the escape hatch until a digit is typed
+      const empty = variant === '2' && !S.entry;
+      cls = empty ? 'dunno' : 'sub';
+      label = empty ? 'Weiß<br>nicht' : '✓';
+    }
+    const btn = el(`<button class="${cls}">${label}</button>`);
+    btn.onclick = () => (k === 'sub' && variant === '2' && !S.entry) ? dunno() : key(k, answer);
     grid.appendChild(btn);
   });
   app.appendChild(keys);
+
+  if (variant === '1') {                 // ⚙1: its own quiet button below
+    const bar = el('<div id="dunnobar" class="pad"><button>Weiß nicht</button></div>');
+    bar.querySelector('button').onclick = () => dunno();
+    app.appendChild(bar);
+  }
 }
 
 function key(k, answer) {
@@ -302,33 +286,29 @@ function key(k, answer) {
     if (!S.entry) return;
     const ok = +S.entry === answer;
     S.res[S.idx] = ok; S.miss = ok ? 0 : S.miss + 1; S.locked = true;
-    ack(ok, answer);
+    ack();
     return;
   }
   if (S.entry.length < 2) S.entry += k;
   render();
 }
 
-/* the neutral acknowledgment — quiz-style, no right/wrong (#7) */
-function ack(ok, answer) {
-  const f = document.getElementById('field');
-  if (variant === 'A') {                     // A: nothing but the bar moving
-    f.textContent = S.entry;
-    document.querySelector('.bar').style.width = ((probed()) / 36 * 100) + '%';
-  }
-  if (variant === 'B') {                     // B: the tile fills, neutral grey-blue
-    const t = document.querySelectorAll('.tile')[S.idx];
-    t.classList.add('probed', 'pop'); t.classList.remove('cur');
-    setTimeout(() => t.classList.remove('pop'), 300);
-  }
-  if (variant === 'C') {                     // C: a stamp lands in the round's row
-    const st = document.querySelectorAll('.stamp')[S.idx % 6];
-    st.classList.add('set', 'pop'); setTimeout(() => st.classList.remove('pop'), 300);
-  }
+/* "Weiß nicht" — mechanically a miss (level 1, counts toward the mercy stop),
+   acknowledged exactly as neutrally as every other probe. */
+function dunno() {
+  if (S.locked) return;
+  S.res[S.idx] = 'dunno'; S.miss++; S.dunnos++; S.locked = true;
+  ack();
+}
+
+/* neutral acknowledgment (#7): a stamp lands, nothing is judged */
+function ack() {
+  const st = document.querySelectorAll('.stamp')[S.idx % 6];
+  st.classList.add('set', 'pop'); setTimeout(() => st.classList.remove('pop'), 300);
   setTimeout(() => {
     S.idx++; S.entry = ''; S.locked = false;
-    if (S.miss >= 6) { S.mercy = true; S.screen = 'mercy'; return render(); }
-    if (variant === 'C' && S.idx % 6 === 0 && S.idx < 36) return breather();
+    if (S.miss >= 6) { S.screen = 'mercy'; return render(); }
+    if (S.idx % 6 === 0 && S.idx < 36) return breather();
     S.screen = S.idx >= 36 ? 'reveal' : 'probe';
     render();
   }, 420);
@@ -348,71 +328,60 @@ function breather() {
   app.appendChild(b);
 }
 
-/* mercy stop after 6 straight misses (#7) — the rest is seeded level 1 */
+/* mercy stop after 6 straight misses (#7); "weiß nicht" counts */
 function mercy() {
-  const rest = 36 - probed();
-  const copy = {
-    A: `<h1>Das reicht schon.</h1><p class="body">Den Rest schauen wir uns nicht einzeln an –
-        wir fangen einfach zusammen an. Mit Knöpfen zum Auswählen, nicht zum Tippen.</p>`,
-    B: `<h1>Genug für die Karte.</h1><p class="body">Die letzten ${rest} Felder lassen wir offen.
-        Die üben wir sowieso von vorne.</p>`,
-    C: `<h1>Wir hören hier auf.</h1><p class="body">Du musst nicht alles vorher zeigen.
-        Ab jetzt helfe ich dir bei jeder Aufgabe.</p>`,
-  }[variant];
-  const c = el(`<div class="center pad">${variant === 'C' ? '<div class="buddy">🦊</div>' : ''}${copy}</div>`);
-  if (variant === 'B') c.appendChild(mapEl('neutral'));
+  const c = el(`<div class="center pad">
+    <div class="buddy">🦊</div>
+    <h1>Wir hören hier auf.</h1>
+    <p class="body">Du musst nicht alles vorher zeigen.
+      Ab jetzt helfe ich dir bei jeder Aufgabe.</p>
+  </div>`);
   c.appendChild(el('<button class="cta">Okay</button>'));
   c.querySelector('.cta').onclick = () => { S.screen = 'reveal'; render(); };
   app.appendChild(c);
 }
 
-/* the reveal — "schau, wie viel du schon kannst" */
+/* the reveal — from B: the map builds itself up, tile by tile.
+   The child has not seen the map before, so this IS the introduction of it. */
 function reveal() {
   const n = known();
-  if (variant === 'A') {
-    const c = el(`<div class="center pad">
-      <h1>Du kannst schon <span style="color:var(--good)">${n}</span> von 36.</h1>
-      <p class="body">Die grünen musst du nicht mehr lernen.
-      Die gelben nehmen wir uns jetzt vor – zehn auf einmal, nicht mehr.</p></div>`);
-    c.appendChild(mapEl('true')); c.appendChild(legendEl());
-    app.appendChild(c);
-  }
-  if (variant === 'B') {                       // the same map the child watched, flipping
-    const c = el(`<div class="center pad"><h2>Deine Karte</h2></div>`);
-    const m = mapEl('neutral'); c.appendChild(m); c.appendChild(legendEl());
-    app.appendChild(c);
-    ORDER.forEach((_, i) => setTimeout(() => {
-      const t = m.children[i];
-      t.classList.remove('probed'); t.classList.add(tileState(i), 'pop');
-      setTimeout(() => t.classList.remove('pop'), 250);
-    }, 40 * i));
-  }
-  if (variant === 'C') {
-    const c = el(`<div class="center pad"><div class="buddy">🦊</div>
-      <h1>${n === 0 ? 'Jetzt weiß ich, wo wir anfangen.' : `${n} kannst du schon!`}</h1>
-      <p class="body">Ich habe dir <b>${Math.min(FRONT, 36 - n)}</b> Aufgaben rausgelegt.
-      Wenn du eine davon kannst, kommt die nächste dazu.</p></div>`);
-    c.appendChild(mapEl('true'));
-    app.appendChild(c);
-  }
-  const b = el(`<div class="pad" style="display:flex;justify-content:center;padding-top:10px">
-    <button class="cta">${{ A: 'Üben', B: 'Weiter', C: 'Los geht’s' }[variant]}</button></div>`);
-  b.querySelector('button').onclick = () => { S.screen = 'day'; render(); };
+  const c = el(`<div class="center pad">
+    <div class="buddy">🦊</div>
+    <h2 id="revealline">Ich baue dir deine Karte.</h2>
+  </div>`);
+  const m = mapEl('empty'); c.appendChild(m); c.appendChild(legendEl());
+  app.appendChild(c);
+  const b = el('<div class="pad" style="display:flex;justify-content:center;padding-top:10px"></div>');
   app.appendChild(b);
+
+  ORDER.forEach((_, i) => setTimeout(() => {
+    const t = m.children[i];
+    t.classList.add(tileState(i), 'pop');
+    setTimeout(() => t.classList.remove('pop'), 250);
+  }, 45 * i));
+
+  setTimeout(() => {
+    document.getElementById('revealline').innerHTML = n === 0
+      ? 'Jetzt weiß ich, wo wir anfangen.'
+      : `<b>${n}</b> kannst du schon!`;
+    const cta = el(`<button class="cta">Los geht’s</button>`);
+    cta.onclick = () => { S.screen = 'day'; render(); };
+    b.appendChild(cta);
+  }, 45 * 36 + 250);
 }
 
-/* day close — after calibration the probes ARE day 1's counting answers (#7),
-   so a fluent child lands straight here; anyone else practises the front first. */
+/* day close — the probes ARE day 1's counting answers (#7) */
 function day() {
   const done = known() >= 36;
-  const goalMet = 36 - known() === 0 || S.fluency >= 0.9;
+  const goalMet = done || S.fluency >= 0.9;
   const c = el(`<div class="center pad">
+    <div class="buddy">🦊</div>
     <h2>${done ? 'Alles gefestigt!' : goalMet ? 'Für heute fertig.' : 'Heute noch dran'}</h2>
     <p class="body">${done
       ? 'Du kannst alle 36. Morgen schauen wir, ob sie sitzen.'
       : goalMet
-        ? 'Alle Aufgaben von heute hast du richtig gehabt. Morgen geht es weiter.'
-        : `Noch ${Math.min(FRONT, 36 - known())} Aufgaben aus deinen zehn.`}</p></div>`);
+        ? 'Alles von heute hattest du richtig. Morgen geht es weiter.'
+        : `Noch ${Math.min(FRONT, 36 - known())} Aufgaben aus deinen blauen.`}</p></div>`);
   c.appendChild(mapEl('true')); c.appendChild(legendEl());
   app.appendChild(c);
 }
@@ -420,15 +389,13 @@ function day() {
 /* interrupted calibration, relaunch (#7: resumes at the first unprobed item) */
 function resume() {
   const at = probed();
-  const copy = {
-    A: `<h1>Weiter, wo du warst.</h1><p class="body">${at} von 36 hast du schon gezeigt.</p>`,
-    B: `<h1>Deine Karte wartet.</h1><p class="body">${36 - at} Felder sind noch offen.</p>`,
-    C: `<h1>Da bist du wieder!</h1><p class="body">Wir waren bei Runde ${Math.floor(at / 6) + 1} von 6.</p>`,
-  }[variant];
-  const c = el(`<div class="center pad">${variant === 'C' ? '<div class="buddy">🦊</div>' : ''}${copy}</div>`);
-  if (variant === 'B') c.appendChild(mapEl('neutral'));
-  if (variant === 'A') c.appendChild(el(`<div class="barwrap" style="width:100%">
-      <div class="bar" style="width:${at / 36 * 100}%"></div></div>`));
+  const c = el(`<div class="center pad">
+    <div class="buddy">🦊</div>
+    <h1>Da bist du wieder!</h1>
+    <p class="body">Wir waren bei Runde ${Math.floor(at / 6) + 1} von 6.</p>
+    <div class="dots">${[1,2,3,4,5,6].map(k =>
+      `<span class="${k <= Math.floor(at / 6) ? 'on' : ''}"></span>`).join('')}</div>
+  </div>`);
   c.appendChild(el('<button class="cta">Weitermachen</button>'));
   c.querySelector('.cta').onclick = () => { S.screen = 'probe'; render(); };
   app.appendChild(c);
@@ -437,15 +404,15 @@ function resume() {
 /* ---------------- chrome wiring ---------------- */
 document.querySelectorAll('#chrome [data-scr]').forEach(b => b.onclick = () => {
   const s = b.dataset.scr;
-  if (s === 'intro') reset(S.fluency, 0);
-  if (s === 'probe') { if (probed() === 0) reset(S.fluency, 0); }
+  if (s === 'intro' || s === 'probe') reset(S.fluency, 0);
   if (s === 'mercy') { reset(S.fluency, 12); S.miss = 6; for (let i = 6; i < 12; i++) S.res[i] = false; }
   if (s === 'reveal' || s === 'day') reset(S.fluency, 36);
   if (s === 'resume') reset(S.fluency, 13);
   S.screen = s; S.entry = ''; S.locked = false; render();
 });
 document.querySelectorAll('#chrome [data-fl]').forEach(b => b.onclick = () => {
-  const scr = S.screen; reset(+b.dataset.fl, ['reveal', 'day'].includes(scr) ? 36 : scr === 'resume' ? 13 : 0);
+  const scr = S.screen;
+  reset(+b.dataset.fl, ['reveal', 'day'].includes(scr) ? 36 : scr === 'resume' ? 13 : 0);
   S.screen = scr; render();
 });
 document.querySelectorAll('#chrome [data-at]').forEach(b => b.onclick = () => {
