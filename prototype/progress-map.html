@@ -69,12 +69,17 @@
   /* check centred; arrow (levelled up today) pinned to the top-right corner */
   .tile .glyphs { display: flex; align-items: center; justify-content: center; line-height: 1; }
   .tile .check { font-size: 16px; }
+  /* arrow variants — all SVG, so the stroke width is ours, not the font's */
   .tile .arrow {
-    position: absolute; top: -8px; right: -6px;
-    color: #F5A623; font-size: 22px; font-weight: 900; line-height: 1;
-    -webkit-text-stroke: 1.2px #F5A623;
-    text-shadow: 0 1px 2px #0002;
+    position: absolute; top: -10px; right: -8px;
+    width: 24px; height: 24px;
+    filter: drop-shadow(0 1px 1.5px #0003);
   }
+  .tile .arrow svg { width: 100%; height: 100%; display: block; }
+  body:not([data-arrow="stroke"]) .arrow.v-stroke { display: none; }
+  body:not([data-arrow="chevron"]) .arrow.v-chevron { display: none; }
+  body:not([data-arrow="solid"]) .arrow.v-solid { display: none; }
+  body:not([data-arrow="outlined"]) .arrow.v-outlined { display: none; }
   .tile.animating { transform: scale(1.18); }
 
   /* ---------- permanent completion badge: rosette in the header ---------- */
@@ -147,6 +152,12 @@
 </div>
 
 <div class="bar">
+  <fieldset><b>Pfeil</b>
+    <button data-k="arrow" data-v="stroke">Strich fett</button>
+    <button data-k="arrow" data-v="chevron">Winkel</button>
+    <button data-k="arrow" data-v="solid">Block</button>
+    <button data-k="arrow" data-v="outlined">Block + Rand</button>
+  </fieldset>
   <fieldset><b>Abzeichen</b>
     <button data-k="badge" data-v="off">aus</button>
     <button data-k="badge" data-v="rosette">Rosette</button>
@@ -173,6 +184,17 @@ for (const b of F) for (const a of F) if (a <= b) items.push({ a, b, state: "not
 const key = (a,b) => `${Math.min(a,b)}x${Math.max(a,b)}`;
 const get = (a,b) => items.find(i => key(i.a,i.b) === key(a,b));
 
+// four arrow takes, all orange (#F5A623); the body[data-arrow] switch shows one
+const ARROWS =
+  // a: fat stroked arrow, round caps
+  '<span class="arrow v-stroke"><svg viewBox="0 0 24 24"><path d="M12 21 V5 M5.5 11 L12 4.5 L18.5 11" fill="none" stroke="#F5A623" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+  // b: chevron only, no shaft — maximum width per ink
+  + '<span class="arrow v-chevron"><svg viewBox="0 0 24 24"><path d="M4 16 L12 7 L20 16" fill="none" stroke="#F5A623" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+  // c: solid filled block arrow
+  + '<span class="arrow v-solid"><svg viewBox="0 0 24 24"><path d="M12 2 L22 13 H16.5 V22 H7.5 V13 H2 Z" fill="#F5A623"/></svg></span>'
+  // d: solid block arrow with white outline, for lift-off from any tile colour
+  + '<span class="arrow v-outlined"><svg viewBox="0 0 24 24"><path d="M12 2 L22 13 H16.5 V22 H7.5 V13 H2 Z" fill="#F5A623" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></span>';
+
 const grid = document.getElementById("grid");
 function render() {
   grid.innerHTML = "";
@@ -192,8 +214,8 @@ function render() {
         el.dataset.key = key(r, c);
         el.innerHTML = '<span class="glyphs">'
           + (it.state === "consolidated" ? '<span class="check">✓</span>' : '')
-          + (it.promoted ? '<span class="arrow">↑</span>' : '')
-          + '</span>';
+          + '</span>'
+          + (it.promoted ? ARROWS : '');
         grid.append(el);
       }
     }
@@ -293,7 +315,7 @@ function syncButtons() {
   });
 }
 
-Object.assign(document.body.dataset, { badge: "off", day: "open" });
+Object.assign(document.body.dataset, { arrow: "solid", badge: "off", day: "open" });
 syncButtons();
 scenario("mid");
 </script>
