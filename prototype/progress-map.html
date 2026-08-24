@@ -10,8 +10,9 @@
     - day open: CTA in #6's accent blue
   Palette aligned with #6 (answer input) and #14 (calibration onboarding):
     green = kannst du, #5BA3D9 = im Spiel, #D5E0EB = nicht begonnen.
-  Still open, hence switchable: the permanent completion badge, and how
-  "heute befördert" is marked on a tile that turns green at the same moment.
+  Round 3: badge = rosette (locked). "Heute befördert" is an arrow shown
+  ALONGSIDE the check, and it marks any level-up today — so it also appears
+  on blue (in-play) tiles, where it stands alone.
 -->
 <style>
   :root {
@@ -24,7 +25,7 @@
     --tile-none: #D5E0EB;
     --tile-play: #5BA3D9;
     --tile-done: #2FA866;
-    --tile: 40px;
+    --tile: 42px;
   }
   * { box-sizing: border-box; }
   body {
@@ -65,46 +66,20 @@
   .tile.consolidated { background: var(--tile-done); }
   .tile.play { background: var(--tile-play); }
   .tile.notstarted { background: var(--tile-none); }
-  .tile .glyph { font-size: 17px; }
-  .tile.notstarted .glyph, .tile.play .glyph { visibility: hidden; }
+  /* glyph row: check (consolidated) and/or arrow (levelled up today) */
+  .tile .glyphs { display: flex; align-items: center; justify-content: center; gap: 1px; line-height: 1; }
+  .tile .check { font-size: 16px; }
+  .tile .arrow { font-size: 21px; font-weight: 700; }
   .tile.animating { transform: scale(1.18); }
 
-  /* ---------- "heute befördert" overlay variants ---------- */
-  body[data-promo="corner"] .tile.promoted::after {
-    content: "▲"; position: absolute; top: -1px; right: 3px; font-size: 10px; color: #fff;
-  }
-  body[data-promo="ring"] .tile.promoted { box-shadow: inset 0 0 0 3px #fff, 0 0 0 2px var(--tile-done); }
-  body[data-promo="arrow"] .tile.promoted .glyph::before { content: "▲"; }
-  body[data-promo="arrow"] .tile.promoted .glyph { font-size: 0; }
-  body[data-promo="arrow"] .tile.promoted .glyph::before { font-size: 15px; }
-
-  /* ---------- permanent completion badge ---------- */
-  .badge { display: none; }
+  /* ---------- permanent completion badge: rosette in the header ---------- */
+  .badge { display: none; align-items: center; justify-content: center; }
   body[data-badge="rosette"] .badge.rosette { display: flex; }
-  body[data-badge="patch"]   .badge.patch   { display: flex; }
-  body[data-badge="crest"]   .badge.crest   { display: flex; }
-
-  .badge { align-items: center; justify-content: center; }
-  /* a: rosette in the header, next to the title */
   .badge.rosette {
     width: 30px; height: 30px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, #FFE9A8, #E2B23C);
     box-shadow: 0 2px 0 #B98F23; font-size: 15px;
   }
-  /* b: sewn-on patch under the map */
-  .badge.patch {
-    margin: 14px auto 0; width: 128px; height: 44px; border-radius: 10px;
-    background: #FFF3D2; border: 2.5px dashed #E2B23C; color: #8A6A16;
-    font-size: 13px; font-weight: 700; letter-spacing: .5px;
-  }
-  /* c: crest stamped over the map's empty upper half */
-  .badge.crest {
-    position: absolute; right: 26px; top: 74px;
-    width: 96px; height: 108px; color: #E2B23C; font-size: 52px;
-    background: radial-gradient(circle, #FFF6DF 40%, #FFF6DF00 70%);
-    transform: rotate(8deg);
-  }
-
   /* ---------- chrome ---------- */
   .footer { text-align: center; margin-top: 20px; min-height: 78px; }
   .start {
@@ -153,9 +128,7 @@
     <div class="badge rosette">★</div>
     <h1>Einmaleins</h1>
   </div>
-  <div class="badge crest">🛡</div>
   <div class="grid" id="grid"></div>
-  <div class="badge patch">GESCHAFFT</div>
   <div class="legend">
     <span><i style="background:var(--tile-done)"></i>kannst du</span>
     <span><i style="background:var(--tile-play)"></i>üben wir</span>
@@ -169,16 +142,9 @@
 </div>
 
 <div class="bar">
-  <fieldset><b>Heute befördert</b>
-    <button data-k="promo" data-v="corner">▲ Ecke</button>
-    <button data-k="promo" data-v="ring">weißer Ring</button>
-    <button data-k="promo" data-v="arrow">▲ statt ✓</button>
-  </fieldset>
   <fieldset><b>Abzeichen</b>
     <button data-k="badge" data-v="off">aus</button>
     <button data-k="badge" data-v="rosette">Rosette</button>
-    <button data-k="badge" data-v="patch">Aufnäher</button>
-    <button data-k="badge" data-v="crest">Wappen</button>
   </fieldset>
   <fieldset><b>Tag</b>
     <button data-k="day" data-v="open">offen</button>
@@ -219,7 +185,10 @@ function render() {
         const it = get(r, c);
         const el = cell(`tile ${it.state}${it.promoted ? " promoted" : ""}`, "");
         el.dataset.key = key(r, c);
-        el.innerHTML = '<span class="glyph">✓</span>';
+        el.innerHTML = '<span class="glyphs">'
+          + (it.state === "consolidated" ? '<span class="check">✓</span>' : '')
+          + (it.promoted ? '<span class="arrow">↑</span>' : '')
+          + '</span>';
         grid.append(el);
       }
     }
@@ -238,7 +207,7 @@ function footer() {
 function stateline() {
   const n = s => items.filter(i => i.state === s).length;
   document.getElementById("stateline").textContent =
-    `kannst du ${n("consolidated")} · üben wir ${n("play")} · später ${n("notstarted")} · heute befördert ${items.filter(i => i.promoted).length}`;
+    `kannst du ${n("consolidated")} · üben wir ${n("play")} · später ${n("notstarted")} · heute ↑ ${items.filter(i => i.promoted).length}`;
 }
 
 // ---- scenarios ------------------------------------------------------------
@@ -249,7 +218,8 @@ function scenario(name) {
   } else if (name === "mid") {
     items.slice(0, 14).forEach(i => i.state = "consolidated");
     items.slice(14, 24).forEach(i => i.state = "play");
-    items.slice(12, 14).forEach(i => i.promoted = true);
+    items.slice(12, 14).forEach(i => i.promoted = true);   // consolidated today: ✓ + ↑
+    items.slice(15, 18).forEach(i => i.promoted = true);   // level-up inside the front: ↑ alone
   } else if (name === "late") {
     items.forEach(i => i.state = "consolidated");
     items.slice(33).forEach(i => { i.state = "play"; i.promoted = false; });
@@ -318,7 +288,7 @@ function syncButtons() {
   });
 }
 
-Object.assign(document.body.dataset, { promo: "corner", badge: "off", day: "open" });
+Object.assign(document.body.dataset, { badge: "off", day: "open" });
 syncButtons();
 scenario("mid");
 </script>
