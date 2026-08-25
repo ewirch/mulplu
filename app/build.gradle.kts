@@ -34,7 +34,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            // Manual-testing hooks (#30): the test panel exists only where this
+            // is true, and the whole panel folds away in release.
+            buildConfigField("boolean", "TEST_HOOKS", "true")
+        }
         release {
+            buildConfigField("boolean", "TEST_HOOKS", "false")
             isMinifyEnabled = false
             // Fall back to the debug key so assembleRelease always yields an
             // installable (sideloadable) APK, even without a local keystore.
@@ -54,6 +60,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -22,8 +23,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mulplu.app.data.StateRepository
+import com.mulplu.app.engine.AppState
 import com.mulplu.app.engine.Engine
-import java.time.LocalDate
 
 /** The single Activity (ADR-0003). */
 class MainActivity : ComponentActivity() {
@@ -66,6 +67,15 @@ private fun App(vm: AppViewModel) {
     }
 
     val appState = state ?: return
+    Box(modifier = Modifier.fillMaxSize()) {
+        AppContent(vm = vm, appState = appState, soundPlayer = soundPlayer)
+        // Manual-testing handle over every screen; empty in release (#30).
+        TestPanel(vm = vm, onQuestionScreen = vm.screen == Screen.Question)
+    }
+}
+
+@Composable
+private fun AppContent(vm: AppViewModel, appState: AppState, soundPlayer: SoundPlayer) {
     // Calibration: while incomplete, and through its mercy/reveal phases even
     // though the last probe already flipped `calibrationComplete` (mvp-spec §8).
     val calPhase = vm.calibrationPhase
@@ -95,7 +105,7 @@ private fun App(vm: AppViewModel) {
             }
         }
         else -> {
-            val today = LocalDate.now()
+            val today = AppClock.today()
             MapScreen(
                 state = appState,
                 dayDone = Engine.openToday(appState, today).isEmpty(),
