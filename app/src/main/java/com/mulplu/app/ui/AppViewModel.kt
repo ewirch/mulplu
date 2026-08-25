@@ -88,7 +88,7 @@ class AppViewModel(
 
     /** Wrong values given per item today — in-memory only (mvp-spec §12). */
     private val rejectedToday = mutableMapOf<ItemKey, MutableSet<Int>>()
-    private var rejectedDate: LocalDate = LocalDate.now()
+    private var rejectedDate: LocalDate = AppClock.today()
     private var soundToken = 0L
     private var answering = false
 
@@ -174,7 +174,7 @@ class AppViewModel(
                 if (state.calibrationComplete) return@update state
                 beforeIndex = state.calibrationIndex
                 completedBefore = state.wasEverCompleted
-                Engine.reduce(state, Event.CalibrationProbeAnswered(given), LocalDate.now())
+                Engine.reduce(state, Event.CalibrationProbeAnswered(given), AppClock.today())
             }
             if (!completedBefore && after.wasEverCompleted) terminalPending = true
             // Neutral acknowledgment: the stamp lands, no right/wrong echo.
@@ -215,7 +215,7 @@ class AppViewModel(
             var completedBefore = false
             val after = repository.update {
                 completedBefore = it.wasEverCompleted
-                Engine.reduce(it, Event.AnswerGiven(item, given), LocalDate.now())
+                Engine.reduce(it, Event.AnswerGiven(item, given), AppClock.today())
             }
             if (!completedBefore && after.wasEverCompleted) terminalPending = true
             if (!correct && given != null) {
@@ -240,7 +240,7 @@ class AppViewModel(
     }
 
     private fun presentNext(state: AppState, lastShown: ItemKey?) {
-        val today = LocalDate.now()
+        val today = AppClock.today()
         if (rejectedDate != today) {
             rejectedToday.clear()
             rejectedDate = today
@@ -254,6 +254,11 @@ class AppViewModel(
             backToMap()
             return
         }
+        present(state, question)
+    }
+
+    /** Puts one drawn question on screen: options and day progress from [state]. */
+    private fun present(state: AppState, question: Question) {
         val choices = question.optionCount?.let { n ->
             Engine.buildChoices(
                 question.shownA,
@@ -264,6 +269,7 @@ class AppViewModel(
             )
         }
         val pool = Engine.pool(state)
+        val today = AppClock.today()
         val satisfied = pool.count { state.items.getValue(it).satisfiedOn == today }
         questionUi = QuestionUi(
             question = question,
@@ -271,6 +277,61 @@ class AppViewModel(
             dayProgress = if (pool.isEmpty()) 0f else satisfied.toFloat() / pool.size,
         )
         screen = Screen.Question
+    }
+
+    // ------------------------------------------------------------- test hooks
+    // Manual-testing shortcuts (#30). Only ever called from the test panel,
+    // which exists only where BuildConfig.TEST_HOOKS is true.
+
+    /** Ends the day and begins the next one, without touching the system clock. */
+    fun testAdvanceDay() {
+        AppClock.dayOffset += 1
+        rejectedToday.clear()
+        rejectedDate = AppClock.today()
+        backToMap()
+    }
+
+    /** Every item consolidated — lands on the map with the terminal animation. */
+    fun testConsolidateAll() {
+        viewModelScope.launch {
+            repository.update(TestHooks::consolidateAll)
+            backToMap()
+            terminalTick += 1
+        }
+    }
+
+    /** Ladder back to the floor, pool back to the first ten; calibration stays done. */
+    fun testResetLevels() {
+        viewModelScope.launch {
+            repository.update(TestHooks::resetLevels)
+            rejectedToday.clear()
+            backToMap()
+        }
+    }
+
+    /** Wipes everything: the next screen is the calibration's intro. */
+    fun testResetAll() {
+        viewModelScope.launch {
+            repository.update { AppState.initial() }
+            AppClock.dayOffset = 0
+            rejectedToday.clear()
+            calibrationPhase = null
+            calProbe = null
+            calAcking = false
+            backToMap()
+        }
+    }
+
+    /** Question screen: the item on screen jumps to [level] and is re-presented. */
+    fun testSetLevel(level: Int) {
+        val shown = questionUi?.question ?: return
+        viewModelScope.launch {
+            val after = repository.update { TestHooks.setLevel(it, shown.item, level) }
+            feedback = null
+            answering = false
+            // Same task, same orientation — only the presentation changes.
+            present(after, shown.copy(optionCount = Engine.optionCount(level)))
+        }
     }
 
     private fun rejectedTodayFor(item: ItemKey): MutableSet<Int> =
