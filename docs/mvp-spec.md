@@ -170,11 +170,12 @@ correct-button position shuffled.
 One-time first-run pass: **all 36 items probed once by free input, in admission order,
 with neutral feedback** (no right/wrong shown). Correct → seeded **level 5** with
 `hasEverConsolidated = true`; wrong → **level 1**. Nothing in between — the ladder
-sorts fluent from shaky in normal practice. Each probe is the item's **day-1 counting
-answer** (`lastCountedOn = today`; correct also sets `satisfiedOn = today`), so a fully
-fluent child ends the ~3–4 minute first run with the day goal reached — and, at 36/36,
-the terminal event fires then (a true statement is not suppressed to protect a
-ceremony).
+sorts fluent from shaky in normal practice. A probe is an **assessment, not a counting
+answer** — it leaves `lastCountedOn` untouched, so a wrong-probed item can still be
+levelled up by day 1's round ([ADR-0006](adr/0006-calibration-probe-is-not-a-counting-answer.md)).
+A correct probe sets `satisfiedOn = today`, so a fully fluent child ends the ~3–4 minute
+first run with the day goal reached — and, at 36/36, the terminal event fires then (a
+true statement is not suppressed to protect a ceremony).
 
 - **Presentation: 6 rounds of 6 probes** with a breather screen between rounds (round
   done, dots filled, "Weiter?"). A **companion figure** speaks the framing ("Hallo! Ich

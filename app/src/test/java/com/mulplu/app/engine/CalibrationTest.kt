@@ -23,7 +23,7 @@ class CalibrationTest {
         val it = s.items.getValue(Ranking.ORDER[0])
         assertEquals(5, it.level)
         assertTrue(it.hasEverConsolidated)
-        assertEquals(day(1), it.lastCountedOn)
+        assertNull(it.lastCountedOn)
         assertEquals(day(1), it.satisfiedOn)
         assertEquals(1, s.calibrationIndex)
         assertEquals(0, s.calibrationMissStreak)
@@ -35,9 +35,30 @@ class CalibrationTest {
         val it = s.items.getValue(Ranking.ORDER[0])
         assertEquals(1, it.level)
         assertFalse(it.hasEverConsolidated)
-        assertEquals(day(1), it.lastCountedOn)
+        assertNull(it.lastCountedOn)
         assertNull(it.satisfiedOn)
         assertEquals(1, s.calibrationMissStreak)
+    }
+
+    @Test
+    fun `a wrong-probed item still levels up in day 1's round`() {
+        val item = Ranking.ORDER[0]
+        var s = probe(AppState.initial(), correct = false)
+        s = Engine.reduce(s, Event.AnswerGiven(item, item.product), day(1))
+        val it = s.items.getValue(item)
+        assertEquals(2, it.level)
+        assertEquals(day(1), it.lastPromotedOn)
+    }
+
+    @Test
+    fun `in a round, wrong then correct on the same item does not level up`() {
+        val item = Ranking.ORDER[0]
+        var s = probe(AppState.initial(), correct = false)
+        s = Engine.reduce(s, Event.AnswerGiven(item, null), day(1))
+        s = Engine.reduce(s, Event.AnswerGiven(item, item.product), day(1))
+        val it = s.items.getValue(item)
+        assertEquals(1, it.level)
+        assertNull(it.lastPromotedOn)
     }
 
     @Test
