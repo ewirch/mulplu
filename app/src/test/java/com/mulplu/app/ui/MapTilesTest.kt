@@ -1,6 +1,7 @@
 package com.mulplu.app.ui
 
 import com.mulplu.app.engine.AppState
+import com.mulplu.app.engine.ItemKey
 import com.mulplu.app.engine.ItemState
 import com.mulplu.app.engine.Ranking
 import java.time.LocalDate
@@ -53,5 +54,20 @@ class MapTilesTest {
             this[old] = ItemState(level = 2, lastPromotedOn = today.minusDays(1))
         }
         assertEquals(listOf(b, a), promotedToday(s, today))
+    }
+
+    @Test
+    fun `pulse waves run diagonal by diagonal, top-left first`() {
+        val near = ItemKey.of(2, 3) // sum 5, closest to the top-left corner
+        val mid1 = ItemKey.of(3, 5) // sum 8
+        val mid2 = ItemKey.of(4, 4) // sum 8 - same diagonal, same wave
+        val far = ItemKey.of(8, 9) // sum 17
+        val s = state {
+            for (item in listOf(far, mid1, near, mid2)) {
+                this[item] = ItemState(level = 2, lastPromotedOn = today)
+            }
+        }
+        val waves = promotedWaves(s, today)
+        assertEquals(listOf(setOf(near), setOf(mid1, mid2), setOf(far)), waves.map { it.toSet() })
     }
 }

@@ -395,7 +395,7 @@ private fun RevealPhase(state: AppState, known: Int, onFinish: () -> Unit) {
         TriangleGrid(
             tiles = tileStates(state),
             promoted = emptySet(),
-            pulsing = null,
+            pulsing = emptySet(),
             revealed = revealed,
         )
         Spacer(Modifier.height(12.dp))
