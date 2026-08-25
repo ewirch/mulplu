@@ -1,7 +1,9 @@
 package com.mulplu.app.ui
 
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import java.time.LocalDate
 
@@ -17,5 +19,21 @@ object AppClock {
     var dayOffset by mutableStateOf(0L)
         internal set
 
+    /** Bumped on every return to the foreground; observed by [todayAsState]. */
+    private var foregroundTick by mutableStateOf(0L)
+
     fun today(): LocalDate = LocalDate.now().plusDays(dayOffset)
+
+    /**
+     * [today] for composition. `LocalDate.now()` is not observable, so a screen
+     * that read the date would keep showing the day the app was backgrounded on
+     * (#31); re-reading on every return to the foreground fixes that.
+     */
+    @Composable
+    fun todayAsState(): LocalDate = remember(foregroundTick, dayOffset) { today() }
+
+    /** The date may have changed while the app was away. */
+    fun onForeground() {
+        foregroundTick += 1
+    }
 }
