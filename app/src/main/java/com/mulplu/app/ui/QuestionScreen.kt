@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.CircleShape
@@ -332,34 +333,45 @@ private fun FreeInputArea(
     }
 
     Column {
+        // Wrapper box so the sparks can burst past the field's rounded clip (#36).
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(if (correctFb) MulpluColors.CorrectGreen.copy(alpha = 0.15f) else Color.White)
-                .border(2.dp, borderColor, RoundedCornerShape(14.dp)),
+                .height(56.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (fieldText.isEmpty()) {
-                Text(
-                    text = "Tippe deine Antwort ein …",
-                    fontSize = 16.sp,
-                    color = MulpluColors.TrackGrey,
-                )
-            } else {
-                Text(
-                    text = fieldText,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = when {
-                        wrong && wrongStage == 1 -> MulpluColors.WrongRed
-                        correctFb || (wrong && wrongStage == 2) -> MulpluColors.CorrectGreen
-                        else -> MulpluColors.Ink
-                    },
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (correctFb) MulpluColors.CorrectGreen.copy(alpha = 0.15f) else Color.White)
+                    .border(2.dp, borderColor, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (fieldText.isEmpty()) {
+                    Text(
+                        text = "Tippe deine Antwort ein …",
+                        fontSize = 16.sp,
+                        color = MulpluColors.TrackGrey,
+                    )
+                } else {
+                    Text(
+                        text = fieldText,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = when {
+                            wrong && wrongStage == 1 -> MulpluColors.WrongRed
+                            correctFb || (wrong && wrongStage == 2) -> MulpluColors.CorrectGreen
+                            else -> MulpluColors.Ink
+                        },
+                    )
+                }
+                if (feedback == null) BlinkingCursor(hasText = fieldText.isNotEmpty())
             }
-            if (feedback == null) BlinkingCursor(hasText = fieldText.isNotEmpty())
+            // Same reward as a correct button pick (mvp-spec §9). Own square
+            // canvas so the burst has a choice button's reach — the flat field
+            // alone would squeeze it into a smudge over the digits.
+            if (correctFb) Box(Modifier.requiredSize(120.dp)) { Sparks() }
         }
         Spacer(Modifier.height(14.dp))
         Keypad(
