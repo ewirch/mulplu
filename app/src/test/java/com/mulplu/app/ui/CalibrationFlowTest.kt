@@ -68,6 +68,29 @@ class CalibrationFlowTest {
     }
 
     @Test
+    fun `the stamp window after the mercy-stop probe still belongs to calibration`() {
+        var state = AppState.initial()
+        repeat(6) { state = probe(state, correct = false) }
+        // The probe is stamped, the phase has not moved on yet (#33): no map.
+        assertEquals(true, inCalibration(state, CalPhase.Probe))
+    }
+
+    @Test
+    fun `the mercy stop and the reveal are shown on the calibration screen`() {
+        var state = AppState.initial()
+        repeat(6) { state = probe(state, correct = false) }
+        assertEquals(true, inCalibration(state, CalPhase.Mercy))
+        assertEquals(true, inCalibration(state, CalPhase.Reveal(known = 0)))
+    }
+
+    @Test
+    fun `leaving the reveal leaves the calibration screen`() {
+        var state = AppState.initial()
+        repeat(36) { state = probe(state, correct = true) }
+        assertEquals(false, inCalibration(state, null))
+    }
+
+    @Test
     fun `knownCount counts only probed-correct items`() {
         var state = AppState.initial()
         repeat(4) { state = probe(state, correct = true) }
