@@ -298,7 +298,15 @@ private fun ProbePhase(
             }
         }
         Spacer(Modifier.height(12.dp))
+        Keypad(
+            enabled = !acking,
+            onDigit = { d -> if (entered.length < 3) entered += d },
+            onBackspace = { entered = entered.dropLast(1) },
+            onSubmit = { entered.toIntOrNull()?.let(onAnswer) },
+        )
+        Spacer(Modifier.height(12.dp))
         // "Weiß nicht" — the escape hatch, on every probe (mvp-spec §9).
+        // Below the keypad, matching its placement on the day question screen (#27).
         Button(
             onClick = { onAnswer(null) },
             enabled = !acking,
@@ -313,13 +321,6 @@ private fun ProbePhase(
         ) {
             Text("Weiß nicht", fontSize = 18.sp, color = Color.White)
         }
-        Spacer(Modifier.height(12.dp))
-        Keypad(
-            enabled = !acking,
-            onDigit = { d -> if (entered.length < 3) entered += d },
-            onBackspace = { entered = entered.dropLast(1) },
-            onSubmit = { entered.toIntOrNull()?.let(onAnswer) },
-        )
     }
 }
 
