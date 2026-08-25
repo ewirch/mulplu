@@ -14,6 +14,9 @@ internal object RevealTimeline {
     const val SHRINK_MS = 450
     const val GROW_SCALE = 1.45f
 
+    /** Free input: how long the red flash runs before the answer is revealed. */
+    const val RED_FLASH_MS = 700L
+
     /** When the last animation ends, ms after the feedback phase started. */
     const val TOTAL_MS = GROW_DELAY_MS + GROW_MS + HOLD_MS + SHRINK_MS
 }
