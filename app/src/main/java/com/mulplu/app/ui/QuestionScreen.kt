@@ -149,7 +149,10 @@ private fun TaskText(ui: QuestionUi, feedback: Feedback?) {
         },
         fontSize = 48.sp,
         fontWeight = FontWeight.Bold,
-        color = if (revealForFree) MulpluColors.CorrectGreen else MulpluColors.Ink,
+        // Green means "you produced it". After "Weiß nicht" the reveal stays
+        // neutral (#32) — otherwise a still-standing correct entry reads as a
+        // correct answer, though it was counted as a miss.
+        color = if (feedback is Feedback.Wrong) MulpluColors.CorrectGreen else MulpluColors.Ink,
         textAlign = TextAlign.Center,
     )
 }
@@ -305,10 +308,12 @@ private fun FreeInputArea(
             stage = 2
         }
     }
+    // The "Weiß nicht" reveal is neutral, not green (#32): green is reserved for
+    // an answer the child produced, and the entry it typed stays on screen.
     val borderColor = when {
         correctFb -> MulpluColors.CorrectGreen
         wrong && stage == 1 -> MulpluColors.WrongRed
-        (wrong && stage == 2) || reveal -> MulpluColors.CorrectGreen
+        wrong && stage == 2 -> MulpluColors.CorrectGreen
         else -> MulpluColors.InPlayBlue
     }
     val fieldText = when {
@@ -341,7 +346,7 @@ private fun FreeInputArea(
                     fontWeight = FontWeight.Bold,
                     color = when {
                         wrong && stage == 1 -> MulpluColors.WrongRed
-                        correctFb || (wrong && stage == 2) || reveal -> MulpluColors.CorrectGreen
+                        correctFb || (wrong && stage == 2) -> MulpluColors.CorrectGreen
                         else -> MulpluColors.Ink
                     },
                 )
