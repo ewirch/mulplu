@@ -67,6 +67,17 @@ fun QuestionScreen(
     feedback: Feedback?,
     onAnswer: (Int?) -> Unit,
 ) {
+    // Two-stage wrong feedback (mvp-spec §9): red flash first, then the answer
+    // in green. Held here, not inside the field, so the task line reveals in
+    // step with the field instead of during the red flash (#35).
+    var wrongStage by remember(feedback) { mutableStateOf(0) }
+    LaunchedEffect(feedback) {
+        if (feedback is Feedback.Wrong) {
+            wrongStage = 1
+            kotlinx.coroutines.delay(RevealTimeline.RED_FLASH_MS)
+            wrongStage = 2
+        }
+    }
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -81,7 +92,7 @@ fun QuestionScreen(
                 .fillMaxWidth(),
             contentAlignment = Alignment.Center,
         ) {
-            TaskText(ui = ui, feedback = feedback)
+            TaskText(ui = ui, feedback = feedback, wrongStage = wrongStage)
         }
         if (ui.choices != null) {
             ChoiceGrid(
@@ -94,6 +105,7 @@ fun QuestionScreen(
             FreeInputArea(
                 correct = ui.question.item.product,
                 feedback = feedback,
+                wrongStage = wrongStage,
                 onSubmit = onAnswer,
             )
         }
@@ -138,9 +150,12 @@ private fun DayProgressBar(progress: Float) {
 }
 
 @Composable
-private fun TaskText(ui: QuestionUi, feedback: Feedback?) {
+private fun TaskText(ui: QuestionUi, feedback: Feedback?, wrongStage: Int) {
     val q = ui.question
-    val revealForFree = ui.choices == null && (feedback is Feedback.Wrong || feedback is Feedback.Reveal)
+    // Wrong answer in free input: reveal only from stage 2 on, so the solution
+    // is not on screen while the field is still flashing red (#35).
+    val wrongRevealed = feedback is Feedback.Wrong && (ui.choices != null || wrongStage == 2)
+    val revealForFree = ui.choices == null && (wrongRevealed || feedback is Feedback.Reveal)
     Text(
         text = if (revealForFree) {
             "${q.shownA} × ${q.shownB} = ${q.item.product}"
@@ -152,7 +167,7 @@ private fun TaskText(ui: QuestionUi, feedback: Feedback?) {
         // Green means "you produced it". After "Weiß nicht" the reveal stays
         // neutral (#32) — otherwise a still-standing correct entry reads as a
         // correct answer, though it was counted as a miss.
-        color = if (feedback is Feedback.Wrong) MulpluColors.CorrectGreen else MulpluColors.Ink,
+        color = if (wrongRevealed) MulpluColors.CorrectGreen else MulpluColors.Ink,
         textAlign = TextAlign.Center,
     )
 }
@@ -293,33 +308,26 @@ fun Sparks(color: Color = MulpluColors.CorrectGreen) {
 private fun FreeInputArea(
     correct: Int,
     feedback: Feedback?,
+    /** Stage of the two-stage wrong feedback, driven by the screen (#35). */
+    wrongStage: Int,
     onSubmit: (Int) -> Unit,
 ) {
     var entered by remember(correct, feedback == null) { mutableStateOf("") }
     val wrong = feedback is Feedback.Wrong
     val correctFb = feedback is Feedback.Correct
     val reveal = feedback is Feedback.Reveal
-    // Two-stage wrong feedback: red flash first, then the correct answer in green.
-    var stage by remember(feedback) { mutableStateOf(0) }
-    LaunchedEffect(feedback) {
-        if (wrong) {
-            stage = 1
-            kotlinx.coroutines.delay(700)
-            stage = 2
-        }
-    }
     // The "Weiß nicht" reveal is neutral, not green (#32): green is reserved for
     // an answer the child produced, and the entry it typed stays on screen.
     val borderColor = when {
         correctFb -> MulpluColors.CorrectGreen
-        wrong && stage == 1 -> MulpluColors.WrongRed
-        wrong && stage == 2 -> MulpluColors.CorrectGreen
+        wrong && wrongStage == 1 -> MulpluColors.WrongRed
+        wrong && wrongStage == 2 -> MulpluColors.CorrectGreen
         else -> MulpluColors.InPlayBlue
     }
     val fieldText = when {
         correctFb -> "$correct"
-        wrong && stage == 1 -> entered.ifEmpty { (feedback as Feedback.Wrong).given.toString() }
-        (wrong && stage == 2) || reveal -> "$correct"
+        wrong && wrongStage == 1 -> entered.ifEmpty { (feedback as Feedback.Wrong).given.toString() }
+        (wrong && wrongStage == 2) || reveal -> "$correct"
         else -> entered
     }
 
@@ -345,8 +353,8 @@ private fun FreeInputArea(
                     fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = when {
-                        wrong && stage == 1 -> MulpluColors.WrongRed
-                        correctFb || (wrong && stage == 2) -> MulpluColors.CorrectGreen
+                        wrong && wrongStage == 1 -> MulpluColors.WrongRed
+                        correctFb || (wrong && wrongStage == 2) -> MulpluColors.CorrectGreen
                         else -> MulpluColors.Ink
                     },
                 )
