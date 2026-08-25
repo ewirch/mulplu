@@ -34,9 +34,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -168,11 +169,21 @@ private fun ChoiceGrid(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         rows.forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                row.forEach { value ->
+                row.forEachIndexed { col, value ->
+                    // Grow pivot: edge columns grow inward, every button grows
+                    // upward into the flexible task area — never off screen and
+                    // never down into "Weiß nicht" (#25).
+                    val pivotX = when {
+                        row.size == 1 -> 0.5f
+                        col == 0 -> 0f
+                        col == row.size - 1 -> 1f
+                        else -> 0.5f
+                    }
                     ChoiceButton(
                         value = value,
                         isCorrect = value == correct,
                         feedback = feedback,
+                        growOrigin = TransformOrigin(pivotX, 1f),
                         onPick = { onPick(value) },
                         modifier = Modifier.weight(1f),
                     )
@@ -187,6 +198,7 @@ private fun ChoiceButton(
     value: Int,
     isCorrect: Boolean,
     feedback: Feedback?,
+    growOrigin: TransformOrigin,
     onPick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -214,7 +226,11 @@ private fun ChoiceButton(
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(alpha)
-                .scale(scale),
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = growOrigin
+                },
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Text(
