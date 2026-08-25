@@ -4,6 +4,7 @@ import java.time.LocalDate
 import java.util.Random as JavaRandom
 import kotlin.random.Random
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -143,12 +144,9 @@ class SimulationOracleTest {
         assertEquals(36, state.items.values.count { it.hasEverConsolidated })
     }
 
-    @Test
-    fun `guessing guard - a pure guesser never consolidates anything`() {
-        // The seed is load-bearing, which it should not be: on most seeds a blind
-        // free-input hit does consolidate an item. #38 owns that; #37 only shifted
-        // the RNG stream off the previously lucky seed 99.
-        val rng = Random(33)
+    /** A learner that knows nothing: mercy-stopped calibration, then blind guessing. */
+    private fun runPureGuesser(seed: Int, days: Int): AppState {
+        val rng = Random(seed)
         var state = AppState.initial()
         val start = LocalDate.of(2026, 1, 1)
         // calibration: knows nothing, always "Weiß nicht" -> mercy stop
@@ -157,7 +155,7 @@ class SimulationOracleTest {
         }
         assertTrue(state.calibrationComplete)
 
-        for (d in 1..365) {
+        for (d in 1..days) {
             val today = start.plusDays((d - 1).toLong())
             var lastShown: ItemKey? = null
             var asked = 0
@@ -174,10 +172,26 @@ class SimulationOracleTest {
                 state = Engine.reduce(state, Event.AnswerGiven(q.item, given), today)
             }
         }
-        // levels 1-3 are guessable, but level 5 needs free-input success:
-        // the ~4 % residual of blind guessing must not produce consolidation
-        assertEquals(0, state.items.values.count { it.hasEverConsolidated })
-        assertTrue(state.items.values.all { it.level <= 4 })
+        return state
+    }
+
+    @Test
+    fun `guessing guard - a pure guesser never masters the table`() {
+        // Levels 4-5 are free input, so a blind hit at ~1/78 can consolidate a single
+        // item, and hasEverConsolidated is monotone: over months that becomes close to
+        // certain. What holds is the weaker property (#38, mvp-spec §13): guessing never
+        // carries the learner through the table, and the residual stays well below the
+        // front width. Swept over seeds so that no single one is load-bearing.
+        val counts = (1..20).map { seed ->
+            val state = runPureGuesser(seed, days = 365)
+            assertFalse(
+                "a pure guesser completed all 36 items (seed=$seed)",
+                state.wasEverCompleted,
+            )
+            state.items.values.count { it.hasEverConsolidated }
+        }
+        // measured over 60 seeds: mean 2.1 / max 7 at 365 days, max 10 of 36 at 1095
+        assertTrue("guessing residual too large: $counts", counts.average() < 5.0)
     }
 
     @Test
