@@ -57,10 +57,15 @@ private fun App(vm: AppViewModel) {
     LaunchedEffect(vm.soundEvent) { vm.soundEvent?.let { (_, sound) -> soundPlayer.play(sound) } }
 
     // Backgrounding (Home, recents, lock): the open question evaporates (mvp-spec §10).
+    // Coming back re-reads the date — it may have changed while we were away (#31).
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) vm.onBackgrounded()
+            when (event) {
+                Lifecycle.Event.ON_STOP -> vm.onBackgrounded()
+                Lifecycle.Event.ON_START -> AppClock.onForeground()
+                else -> Unit
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -105,7 +110,7 @@ private fun AppContent(vm: AppViewModel, appState: AppState, soundPlayer: SoundP
             }
         }
         else -> {
-            val today = AppClock.today()
+            val today = AppClock.todayAsState()
             MapScreen(
                 state = appState,
                 dayDone = Engine.openToday(appState, today).isEmpty(),
