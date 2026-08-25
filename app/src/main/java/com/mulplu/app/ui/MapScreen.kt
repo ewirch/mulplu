@@ -82,16 +82,18 @@ fun MapScreen(
     val tiles = tileStates(state)
     val promoted = promotedToday(state, today).toSet()
 
-    // Day close: the map animates the day's movements, one pulse per moved
-    // tile, with the day-close sound. A day with zero movements is a quiet map.
-    var pulsing by remember { mutableStateOf<ItemKey?>(null) }
+    // Day close: the map animates the day's movements as a wave running from
+    // the top-left corner to the bottom-right one — one pulse per diagonal of
+    // moved tiles, with the day-close sound. A day with zero movements is a
+    // quiet map.
+    var pulsing by remember { mutableStateOf<Set<ItemKey>>(emptySet()) }
     LaunchedEffect(dayCloseTick) {
         if (dayCloseTick == 0L) return@LaunchedEffect
         onPlayDayClose()
-        for (item in promotedToday(state, today)) {
-            pulsing = item
+        for (wave in promotedWaves(state, today)) {
+            pulsing = wave.toSet()
             delay(280)
-            pulsing = null
+            pulsing = emptySet()
             delay(130)
         }
     }
@@ -101,11 +103,11 @@ fun MapScreen(
     var terminalPhase by remember { mutableStateOf(TerminalPhase.Off) }
     LaunchedEffect(terminalTick) {
         if (terminalTick == 0L) return@LaunchedEffect
-        val last = promotedToday(state, today).lastOrNull()
+        val last = promotedWaves(state, today).lastOrNull()
         if (last != null) {
-            pulsing = last
+            pulsing = last.toSet()
             delay(420)
-            pulsing = null
+            pulsing = emptySet()
         }
         terminalPhase = TerminalPhase.On
         delay(3600)
@@ -196,7 +198,7 @@ private fun Rosette() {
 internal fun TriangleGrid(
     tiles: Map<ItemKey, TileState>,
     promoted: Set<ItemKey>,
-    pulsing: ItemKey?,
+    pulsing: Set<ItemKey>,
     revealed: Set<ItemKey>? = null,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -231,7 +233,7 @@ internal fun TriangleGrid(
                                     Tile(
                                         state = tiles.getValue(item),
                                         promoted = item in promoted,
-                                        pulsing = item == pulsing,
+                                        pulsing = item in pulsing,
                                         size = tileSize,
                                     )
                                 }
