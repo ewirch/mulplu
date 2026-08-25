@@ -209,10 +209,12 @@ object Engine {
     }
 
     /**
-     * Calibration probe per mvp-spec §8: free input, neutral feedback, each probe
-     * is the item's day-1 counting answer. Correct → seeded level 5 and
-     * consolidated; wrong → level 1. Mercy stop after 6 consecutive misses seeds
-     * the remaining items at level 1 (their default) and ends calibration.
+     * Calibration probe per mvp-spec §8: free input, neutral feedback. Correct →
+     * seeded level 5, consolidated and satisfied for the day; wrong → level 1.
+     * A probe is an assessment, not a counting answer: it leaves `lastCountedOn`
+     * untouched, so day 1's round can still move the item (ADR-0006). Mercy stop
+     * after 6 consecutive misses seeds the remaining items at level 1 (their
+     * default) and ends calibration.
      */
     private fun onCalibrationProbe(state: AppState, given: Int?, today: LocalDate): AppState {
         require(!state.calibrationComplete) { "calibration already complete" }
@@ -223,12 +225,11 @@ object Engine {
             if (correct) {
                 ItemState(
                     level = 5,
-                    lastCountedOn = today,
                     satisfiedOn = today,
                     hasEverConsolidated = true,
                 )
             } else {
-                ItemState(level = 1, lastCountedOn = today)
+                ItemState(level = 1)
             }
         val streak = if (correct) 0 else state.calibrationMissStreak + 1
         val nextIndex =

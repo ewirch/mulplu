@@ -123,6 +123,11 @@ wrong → **level 1**. Nothing in between — a single untimed probe cannot tell
 from shaky; the ladder sorts that out in normal practice, where a miscalibrated
 "known" is asked daily and revoked on its first wrong counting answer.
 
+A probe seeds a level; it is **not a counting answer**. A calibrated item therefore
+still has its counting answer available on day 1, and a wrong-probed item can level up
+in the first round. (Settled by [#37](https://github.com/ewirch/mulplu/issues/37), see
+[ADR-0006](docs/adr/0006-calibration-probe-is-not-a-counting-answer.md).)
+
 The pass is presented in **6 rounds of 6 probes** with a breather between rounds. This
 is the only place a session-like structure exists: the pass has a fixed size and a
 defined end, so chunking changes nothing about what is achieved — only how near the end
@@ -156,8 +161,8 @@ The end of the calibration is where the **progress map** is shown for the first 
 36 tiles fill in one by one, then the companion names how many items the child already
 produced. The build-up therefore introduces the map rather than replaying state the child
 has already seen — which is why the map is deliberately *absent* during the pass itself.
-The reveal hands straight over into day 1, and since the probes are day 1's counting
-answers, a fluent child arrives at the day close immediately.
+The reveal hands straight over into day 1, and since a correct probe already satisfies its
+item for the day, a fluent child arrives at the day close immediately.
 
 ## Day goal
 
