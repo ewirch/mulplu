@@ -81,10 +81,10 @@ private fun App(vm: AppViewModel) {
 
 @Composable
 private fun AppContent(vm: AppViewModel, appState: AppState, soundPlayer: SoundPlayer) {
-    // Calibration: while incomplete, and through its mercy/reveal phases even
-    // though the last probe already flipped `calibrationComplete` (mvp-spec §8).
+    // Calibration: while incomplete, and through the phases that outlive the
+    // last probe's flip of `calibrationComplete` (mvp-spec §8).
     val calPhase = vm.calibrationPhase
-    if (!appState.calibrationComplete || calPhase is CalPhase.Mercy || calPhase is CalPhase.Reveal) {
+    if (inCalibration(appState, calPhase)) {
         LaunchedEffect(Unit) { vm.ensureCalibrationPhase() }
         if (calPhase != null) {
             CalibrationScreen(

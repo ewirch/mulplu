@@ -64,5 +64,14 @@ fun calPhaseAfterProbe(beforeIndex: Int, after: AppState): CalPhase = when {
     else -> CalPhase.Probe
 }
 
+/**
+ * Whether the calibration screen owns the display. The pass' last probe already
+ * flips `calibrationComplete`, so completion alone cannot end the screen — it
+ * stays until the phase is left behind. Otherwise the map shows through the
+ * stamp window between the last probe and the mercy stop / reveal (#33).
+ */
+fun inCalibration(state: AppState, phase: CalPhase?): Boolean =
+    !state.calibrationComplete || phase != null
+
 /** Items the child produced correctly — "n kannst du schon!" (mvp-spec §8). */
 fun knownCount(state: AppState): Int = state.items.values.count { it.hasEverConsolidated }
