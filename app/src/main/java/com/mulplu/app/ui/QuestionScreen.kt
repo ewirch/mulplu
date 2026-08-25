@@ -207,16 +207,27 @@ private fun ChoiceButton(
     // the picked one — and the correct button grows in its normal colour.
     val revealing = feedback is Feedback.Wrong || feedback is Feedback.Reveal
     val picked = feedback is Feedback.Correct && feedback.given == value
-    val alpha by animateFloatAsState(
-        targetValue = if (revealing && !isCorrect) 0f else 1f,
-        animationSpec = tween(450),
-        label = "fade",
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (revealing && isCorrect) 1.45f else 1f,
-        animationSpec = tween(450, delayMillis = 350),
-        label = "grow",
-    )
+    // Scripted rather than target-driven (#28): grow *and* shrink have to finish
+    // inside the feedback window, and once the feedback clears the button snaps
+    // back — otherwise the next question shows up with the previous correct
+    // button still magnified, shrinking afterwards.
+    val fade = remember { Animatable(1f) }
+    val grow = remember { Animatable(1f) }
+    LaunchedEffect(revealing, isCorrect) {
+        when {
+            !revealing -> {
+                fade.snapTo(1f)
+                grow.snapTo(1f)
+            }
+            isCorrect -> {
+                kotlinx.coroutines.delay(RevealTimeline.GROW_DELAY_MS)
+                grow.animateTo(RevealTimeline.GROW_SCALE, tween(RevealTimeline.GROW_MS))
+                kotlinx.coroutines.delay(RevealTimeline.HOLD_MS)
+                grow.animateTo(1f, tween(RevealTimeline.SHRINK_MS))
+            }
+            else -> fade.animateTo(0f, tween(RevealTimeline.FADE_MS))
+        }
+    }
     Box(modifier = modifier.aspectRatio(1.6f), contentAlignment = Alignment.Center) {
         Surface(
             onClick = onPick,
@@ -225,10 +236,10 @@ private fun ChoiceButton(
             color = if (picked) MulpluColors.CorrectGreen else MulpluColors.CardGrey,
             modifier = Modifier
                 .fillMaxSize()
-                .alpha(alpha)
                 .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
+                    alpha = fade.value
+                    scaleX = grow.value
+                    scaleY = grow.value
                     transformOrigin = growOrigin
                 },
         ) {
