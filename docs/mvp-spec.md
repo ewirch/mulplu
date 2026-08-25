@@ -148,8 +148,9 @@ onAnswer(i, given):                          # "Weiß nicht" is handled as given
 
 Distractor quality is a **precondition of the guessing guard**, not a design axis: the
 only guard against guessing is the number of options (pure guessing carries an item to
-free input at ≈4 %, where it collapses), and that holds only if no option is eliminable
-by anything but knowing the answer.
+free input at ≈4 %, where it nearly always collapses — see §13 for the residual that
+does get through), and that holds only if no option is eliminable by anything but
+knowing the answer.
 
 ```
 buildChoices(a, b, n):
@@ -334,9 +335,14 @@ An engine simulation (six learner profiles × 90 days, branch `prototype/engine-
 `prototype/engine_sim.py`) validated the engine as specified — build it without
 re-tuning:
 
-- No oscillation stall; **zero unreached day goals** in ~160 000 simulated play days;
-  no guess-inflated mastery (level 5 needs free-input success, so the ≈4 % guessing
-  residual produces nothing).
+- No oscillation stall; **zero unreached day goals** in ~160 000 simulated play days.
+- **No guess-inflated mastery of the table.** Levels 4–5 are free input, so a blind hit
+  (≈1/78) can consolidate a single item, and `hasEverConsolidated` is monotone — over
+  months that residual is not zero. What holds is that it never carries a learner
+  through: a pure guesser measured over 60 seeds consolidates a mean of 2.1 items
+  (max 7) in a year and 10 of 36 in three years, and **never completes** ([#38](
+  https://github.com/ewirch/mulplu/issues/38)). Guessing buys a few tiles, never the
+  map.
 - Mercy stop = 6 and front width = 10 both validated; **do not re-tune**.
 - Completion (all 36) median: day 5 (fluent) / 14 (strong) / 54 (average) / >90 (weak).
   Accepted — the ladder's length *is* the distributed practice.
