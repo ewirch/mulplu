@@ -15,8 +15,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.mulplu.app.data.StateRepository
 import com.mulplu.app.engine.Engine
@@ -51,6 +54,16 @@ private fun App(vm: AppViewModel) {
     val soundPlayer = remember { SoundPlayer(context) }
     DisposableEffect(Unit) { onDispose { soundPlayer.release() } }
     LaunchedEffect(vm.soundEvent) { vm.soundEvent?.let { (_, sound) -> soundPlayer.play(sound) } }
+
+    // Backgrounding (Home, recents, lock): the open question evaporates (mvp-spec §10).
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) vm.onBackgrounded()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     val appState = state ?: return
     // Calibration: while incomplete, and through its mercy/reveal phases even

@@ -102,6 +102,11 @@ class AppViewModel(
         }
     }
 
+    /** Backgrounding: an open question evaporates, return lands on the map (mvp-spec §10). */
+    fun onBackgrounded() {
+        if (screen == Screen.Question) backToMap()
+    }
+
     fun backToMap() {
         screen = Screen.Map
         questionUi = null
@@ -229,7 +234,8 @@ class AppViewModel(
             delay(if (correct) CORRECT_FEEDBACK_MS else WRONG_FEEDBACK_MS)
             feedback = null
             answering = false
-            presentNext(after, lastShown = item)
+            // Backgrounded mid-feedback: the question already evaporated — don't re-open one.
+            if (screen == Screen.Question) presentNext(after, lastShown = item)
         }
     }
 
