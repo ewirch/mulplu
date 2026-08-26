@@ -5,6 +5,19 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
+// The one release key (#46). It signs the sideload APK, and Play App Signing
+// holds the same key, so a Play install is an *update* of a sideloaded one.
+// Local, never committed — not even password-protected, since a keystore
+// password only buys time against an offline attack and an Android signing key
+// cannot be rotated. Created with:
+//   keytool -genkeypair -keystore app/release.keystore -alias mulplu \
+//     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Mulplu"
+val releaseKeystore = file("release.keystore")
+val releaseStorePassword: String? = System.getenv("MULPLU_STORE_PASSWORD")
+val releaseKeyPassword: String? = System.getenv("MULPLU_KEY_PASSWORD")
+val releaseSignable =
+    releaseKeystore.exists() && releaseStorePassword != null && releaseKeyPassword != null
+
 android {
     namespace = "com.mulplu.app"
     compileSdk = 35
@@ -13,22 +26,20 @@ android {
         applicationId = "com.mulplu.app"
         minSdk = 28
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1"
+        // Monotone across *all* channels — every artefact that leaves this
+        // machine takes the next code, sideload or Play. These are the next
+        // free numbers, not the last shipped ones. Tag v<versionName> on ship.
+        versionCode = 2
+        versionName = "1.0"
     }
 
     signingConfigs {
         create("release") {
-            // Sideloading key. Local, never committed. Create with:
-            //   keytool -genkeypair -keystore app/release.keystore -alias mulplu \
-            //     -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Mulplu"
-            // Passwords via env MULPLU_STORE_PASSWORD / MULPLU_KEY_PASSWORD.
-            val ks = file("release.keystore")
-            if (ks.exists()) {
-                storeFile = ks
-                storePassword = System.getenv("MULPLU_STORE_PASSWORD")
+            if (releaseSignable) {
+                storeFile = releaseKeystore
+                storePassword = releaseStorePassword
                 keyAlias = "mulplu"
-                keyPassword = System.getenv("MULPLU_KEY_PASSWORD")
+                keyPassword = releaseKeyPassword
             }
         }
     }
@@ -41,14 +52,14 @@ android {
         }
         release {
             buildConfigField("boolean", "TEST_HOOKS", "false")
+            // R8 stays off: the saving is invisible at this size, while a
+            // release-only serialization break would surface on the child's
+            // device, where adb cannot reach the supervised user (#44).
             isMinifyEnabled = false
-            // Fall back to the debug key so assembleRelease always yields an
-            // installable (sideloadable) APK, even without a local keystore.
-            signingConfig = if (file("release.keystore").exists()) {
-                signingConfigs.getByName("release")
-            } else {
-                signingConfigs.getByName("debug")
-            }
+            // Never the debug key: Play rejects debug-signed artefacts, and one
+            // would not update the sideloaded install. Unsignable means no
+            // signing config at all — the packaging guard below then aborts.
+            signingConfig = if (releaseSignable) signingConfigs.getByName("release") else null
         }
     }
     compileOptions {
@@ -63,6 +74,19 @@ android {
         buildConfig = true
     }
 }
+
+// Abort before an unsigned APK or AAB exists. Attached to the packaging tasks
+// rather than the whole build so that `test` and debug builds still work on a
+// fresh clone, where the keystore is absent by design.
+tasks.matching { it.name == "packageRelease" || it.name == "packageReleaseBundle" }
+    .configureEach {
+        doFirst {
+            check(releaseSignable) {
+                "Cannot sign the release: needs app/release.keystore plus " +
+                    "MULPLU_STORE_PASSWORD and MULPLU_KEY_PASSWORD in the environment."
+            }
+        }
+    }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
