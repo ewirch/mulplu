@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE — Play-Listing für Mulplu (#48)</title>
+<style>
+  :root {
+    --accent: #3E6FE0;
+    --inplay: #5BA3D9;
+    --green: #2FA866;
+    --grey: #D5E0EB;
+    --card: #EFF4F9;
+    --ink: #2B3A4A;
+    --muted: #5B6B7C;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: #fff; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 20px 120px; }
+  .banner { background: #fff3cd; border: 1px solid #e0c25b; padding: 10px 14px; border-radius: 8px; font-weight: 600; margin-bottom: 20px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 2px solid var(--card); }
+  h3 { font-size: 14px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 22px 0 8px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--ink); padding: 12px; display: flex; gap: 10px; justify-content: center; z-index: 10; }
+  .bar button { font: inherit; font-weight: 600; padding: 9px 18px; border-radius: 999px; border: 0; cursor: pointer; background: #47596c; color: #fff; }
+  .bar button.on { background: #fff; color: var(--ink); }
+  .cols { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .phone { width: 300px; flex: 0 0 300px; border: 1px solid var(--grey); border-radius: 14px; padding: 16px; }
+  .phone .title { font-size: 21px; font-weight: 700; margin: 10px 0 2px; }
+  .phone .dev { color: var(--accent); font-size: 13px; }
+  .phone .short { margin-top: 12px; color: var(--muted); font-size: 14px; }
+  .grow { flex: 1 1 380px; min-width: 320px; }
+  .full { background: var(--card); border-radius: 10px; padding: 16px 18px; white-space: pre-wrap; font-size: 14px; }
+  .icon512 { width: 96px; height: 96px; border-radius: 21%; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+  .feature { width: 100%; max-width: 1024px; aspect-ratio: 1024/500; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.15); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--grey); vertical-align: top; }
+  th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .count { font-size: 12px; color: var(--muted); }
+  .count b { color: var(--ink); }
+  .verdict { border-left: 4px solid var(--accent); background: var(--card); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 12px 0; }
+  .verdict.bad { border-left-color: #E05B5B; }
+  .verdict.good { border-left-color: var(--green); }
+  ul.tight { margin: 8px 0; padding-left: 20px; }
+  code { background: var(--card); padding: 1px 5px; border-radius: 4px; font-size: .92em; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="banner">PROTOTYP — Wegwerf-Artefakt zu <a href="https://github.com/ewirch/mulplu/issues/48">#48 „Store listing: name, texts, and visual assets“</a>. Grafiken sind SVG-Mockups, keine Abgabe-Assets. Branch <code>prototype/store-listing</code>.</div>
+
+<h1>Play-Listing für Mulplu — drei Richtungen</h1>
+<p class="sub">Unten umschalten. Die drei Richtungen unterscheiden sich nur in <b>Name und Tonfall</b> — Kategorie, Screenshot-Set und Asset-Spezifikation sind gemeinsam und stehen weiter unten.</p>
+
+<!-- ============================================================ A -->
+<section id="v-a">
+  <h2>A — Reiner Kunstname: „Mulplu“</h2>
+  <div class="cols">
+    <div class="phone">
+      <div class="icon512" id="ic-a"></div>
+      <div class="title">Mulplu</div>
+      <div class="dev">Eduard Wirch · Bildung</div>
+      <div class="short">Einmaleins üben, ohne Punkte und ohne Zeitdruck.</div>
+      <div class="count">Titel <b>6</b>/30 · Kurztext <b>48</b>/80</div>
+    </div>
+    <div class="grow">
+      <h3>Feature-Grafik 1024×500</h3>
+      <div class="feature" id="fg-a"></div>
+      <h3>Vollständige Beschreibung</h3>
+      <div class="full">Mulplu ist ein Einmaleins-Trainer für ein Kind — nicht für eine Bestenliste.
+
+Beim ersten Start fragt Mulplu alle 36 Aufgaben einmal ab und merkt sich, was schon sitzt. Danach gibt es jeden Tag eine Runde: jede Aufgabe, die dran ist, einmal richtig — dann ist der Tag fertig.
+
+Jede Aufgabe hat eine eigene Stufe. Erst zwei Zahlen zur Auswahl, dann drei, dann vier, zuletzt tippt das Kind selbst. Richtig heißt eine Stufe höher, falsch heißt eine Stufe zurück — also wieder etwas leichter. Falsch ist kein Verlust, sondern nur die nächste, passendere Frage. „Weiß nicht“ ist immer erlaubt.
+
+36 Kacheln zeigen den Stand: grün „kannst du“, blau „üben wir“, grau „später“. Mehr gibt es nicht zu sehen.
+
+Keine Punkte. Keine Sterne. Keine Serie. Keine Uhr. Keine Werbung. Keine Käufe. Kein Konto. Keine Internetverbindung — die App fragt keine Berechtigung an und sendet nichts.
+
+Freie Software, GPL-3.0. Der Quelltext ist öffentlich.</div>
+    </div>
+  </div>
+  <div class="verdict"><b>Wofür das steht:</b> maximal verteidigbar. Ein Kunstwort ist kennzeichnungskräftig — genau das, was gegen die in <a href="https://github.com/ewirch/mulplu/issues/43">#43</a> beschriebene GPL-Wiederveröffentlichung hilft: eine Kopie unter demselben Namen ist dann Impersonation, und das greift bei einem beschreibenden Namen nicht. <b>Preis:</b> null Auffindbarkeit — niemand sucht „Mulplu“.</div>
+</section>
+
+<!-- ============================================================ B -->
+<section id="v-b" class="hidden">
+  <h2>B — Kunstname plus Sachwort: „Mulplu – Einmaleins üben“</h2>
+  <div class="cols">
+    <div class="phone">
+      <div class="icon512" id="ic-b"></div>
+      <div class="title">Mulplu – Einmaleins üben</div>
+      <div class="dev">Eduard Wirch · Bildung</div>
+      <div class="short">Das Einmaleins in kleinen Schritten – ohne Punkte, ohne Uhr.</div>
+      <div class="count">Titel <b>24</b>/30 · Kurztext <b>60</b>/80</div>
+    </div>
+    <div class="grow">
+      <h3>Feature-Grafik 1024×500</h3>
+      <div class="feature" id="fg-b"></div>
+      <h3>Vollständige Beschreibung</h3>
+      <div class="full">Mulplu ist ein Einmaleins-Trainer für die Grundschule — gebaut für ein Kind, nicht für eine Bestenliste.
+
+<b>So läuft es</b>
+Beim ersten Start fragt Mulplu alle 36 Aufgaben des kleinen Einmaleins einmal ab und merkt sich, was schon sitzt. Danach gibt es jeden Tag genau eine Runde: jede Aufgabe, die dran ist, einmal richtig — dann ist der Tag fertig. Es gibt nichts, was man verpassen kann, und nichts, was länger dauert, wenn man mehr übt.
+
+<b>Kleine Schritte</b>
+Jede Aufgabe hat eine eigene Stufe. Anfangs stehen zwei Zahlen zur Auswahl, dann drei, dann vier — und zuletzt tippt das Kind die Antwort selbst ein. Richtig heißt eine Stufe höher, falsch heißt eine Stufe zurück, also wieder etwas leichter. Falsch ist damit kein Verlust, sondern nur die nächste, passendere Frage. „Weiß nicht“ ist überall eine erlaubte Antwort.
+
+<b>Die Karte</b>
+36 Kacheln zeigen, wo das Kind steht: grün „kannst du“, blau „üben wir“, grau „später“. Am Ende eines Tages zeigt die Karte, was sich bewegt hat. Mehr gibt es nicht zu sehen — keine Punkte, keine Sterne, keine Serie, kein Vergleich mit gestern.
+
+<b>Was Mulplu nicht macht</b>
+• Keine Zeitmessung, kein Countdown, kein Zeitdruck.
+• Keine Punkte, keine Belohnungen, nichts zu sammeln.
+• Keine Werbung, keine Käufe in der App.
+• Kein Konto, keine Anmeldung.
+• Keine Internetverbindung — die App fragt keine einzige Berechtigung an und sendet nichts. Der Lernstand bleibt auf dem Gerät.
+
+Mulplu ist freie Software (GPL-3.0). Der Quelltext ist öffentlich.</div>
+    </div>
+  </div>
+  <div class="verdict good"><b>Wofür das steht:</b> behält den kennzeichnungskräftigen Kern und stellt das eine Wort dazu, nach dem ein Elternteil tatsächlich sucht. Der Zusatz ist ein Sachhinweis, kein Keyword-Stuffing (verboten wären Ketten wie „Einmaleins Mathe üben Grundschule 1x1 Rechnen“). <b>Empfehlung</b> — solange 24 Zeichen im Launcher nicht störend abgeschnitten werden; der Launcher-Name bleibt ohnehin <code>Mulplu</code> (Store-Titel und <code>app_name</code> müssen nicht übereinstimmen).</div>
+</section>
+
+<!-- ============================================================ C -->
+<section id="v-c" class="hidden">
+  <h2>C — Beschreibend zuerst: „Einmaleins-Karte“</h2>
+  <div class="cols">
+    <div class="phone">
+      <div class="icon512" id="ic-c"></div>
+      <div class="title">Einmaleins-Karte</div>
+      <div class="dev">Eduard Wirch · Bildung</div>
+      <div class="short">Kleines Einmaleins üben: 36 Aufgaben, eine Karte, ein Tagesziel.</div>
+      <div class="count">Titel <b>16</b>/30 · Kurztext <b>64</b>/80</div>
+    </div>
+    <div class="grow">
+      <h3>Feature-Grafik 1024×500</h3>
+      <div class="feature" id="fg-c"></div>
+      <h3>Vollständige Beschreibung</h3>
+      <div class="full">Kleines Einmaleins üben — 36 Aufgaben, eine Karte, ein Tagesziel.
+
+Die App prüft beim ersten Start, welche Aufgaben schon sitzen, und stellt danach täglich nur die, die dran sind. Jede Aufgabe hat eine eigene Stufe: erst Antworten zum Auswählen, später freies Eintippen. Eine falsche Antwort macht die Aufgabe wieder leichter statt schwerer.
+
+Die Karte aus 36 Kacheln ist der ganze Fortschritt: grün können, blau üben, grau später.
+
+Ohne Punkte, ohne Zeitmessung, ohne Werbung, ohne Konto, ohne Internetverbindung.
+
+Freie Software (GPL-3.0), Quelltext öffentlich.</div>
+    </div>
+  </div>
+  <div class="verdict bad"><b>Wofür das steht:</b> beste Auffindbarkeit, schlechteste Verteidigbarkeit. Ein beschreibender Name ist markenrechtlich kaum schützbar und in einer überfüllten Kategorie nicht unterscheidbar — gegen einen GPL-Nachbau unter gleichem Namen (<a href="https://github.com/ewirch/mulplu/issues/43">#43</a>) gibt es dann kein Argument. Auffindbarkeit ist für <i>diese</i> App außerdem der Nutzen, der am wenigsten zählt: das Ziel ist ein Gerät, nicht ein Markt. <b>Hier als das explizit Verworfene aufgeführt.</b></div>
+</section>
+
+<!-- ============================================================ shared -->
+<h2>Gemeinsam für alle Richtungen</h2>
+
+<h3>Kategorie und Tags</h3>
+<table>
+  <tr><th>Feld</th><th>Vorschlag</th><th>Begründung</th></tr>
+  <tr><td>App-Typ</td><td><b>App</b>, nicht Spiel</td><td>Keine Punkte, keine Belohnungen, kein Spielziel. „Spiel“ würde außerdem die Games-Kategorien und andere Erwartungen aufrufen.</td></tr>
+  <tr><td>Kategorie</td><td><b>Bildung</b> (Education)</td><td>Alternative wäre „Lernen für Kinder“ / Familien-Sortierung — die folgt aber automatisch aus der Zielgruppen-Erklärung „Kinder“ aus <a href="https://github.com/ewirch/mulplu/issues/42">#42</a>.</td></tr>
+  <tr><td>Tags</td><td>bis zu 5 aus Googles fester Liste, Richtung: Mathematik / Grundschule / Lernen üben</td><td>Die Liste ist fest vorgegeben und nur in der Console sichtbar. Genaue Strings hier <b>nicht</b> vorentscheidbar — beim Anlegen des Listings auswählen.</td></tr>
+</table>
+
+<h3>Screenshot-Set (Telefon, 5 Stück, Hochformat 9:16)</h3>
+<table>
+  <tr><th>#</th><th>Bildschirm</th><th>Was er zeigt</th></tr>
+  <tr><td>1</td><td>Fortschrittskarte, mittlerer Stand</td><td>Das Zuhause der App und die ganze Idee auf einmal: grün/blau/grau gemischt, Legende sichtbar. Muss das erste Bild sein.</td></tr>
+  <tr><td>2</td><td>Frage, Stufe 1–2 (Auswahl)</td><td>Große Aufgabe oben, zwei bis drei Zahlen unten, „Weiß nicht“ an fester Stelle.</td></tr>
+  <tr><td>3</td><td>Frage, freie Eingabe</td><td>Dieselbe Aufgabe ohne Auswahl — macht die Stufenleiter ohne Worte sichtbar.</td></tr>
+  <tr><td>4</td><td>Tagesabschluss „Für heute fertig“</td><td>Belegt, dass der Tag endet und die App nicht weiterzieht.</td></tr>
+  <tr><td>5</td><td>Kalibrierung mit Begleitfigur</td><td>Der erste Start, den jeder Nutzer als erstes sieht.</td></tr>
+</table>
+<div class="verdict"><b>Ohne Bildunterschriften-Balken.</b> Untertitelte Screenshots wären zusätzlicher Text in Bildern — Pflege- und Übersetzungsschuld für null Gewinn, und bei einer kinderorientierten App ist jeder werbliche Textbalken zusätzliche Angriffsfläche. Die Screens erklären sich selbst.
+<br><br><b>Aufnahme:</b> echte Screenshots vom Gerät bzw. Emulator, nicht gerendert. Braucht die Test-Hooks (Tagesversatz, Level-Reset), um Stand 1/4 herzustellen. Das ist Handarbeit und gehört nicht in diese Entscheidung.</div>
+
+<h3>Asset-Spezifikation</h3>
+<table>
+  <tr><th>Asset</th><th>Format</th><th>Herkunft</th></tr>
+  <tr><td>Store-Icon</td><td>512×512, 32-bit PNG, keine Transparenz</td><td><b>Exakt die Adaptive-Icon-Komposition</b> aus <code>ic_launcher_background</code> + <code>ic_launcher_foreground</code> (#49) bei 512 gerendert. Store- und Geräte-Icon sind dann dasselbe Bild — Play legt seine Maske selbst darüber.</td></tr>
+  <tr><td>Feature-Grafik</td><td>1024×500, PNG/JPEG, keine Transparenz</td><td>Blaues Feld <code>#3E6FE0</code>, Treppe links, Wortmarke rechts. <b>Kein Screenshot darin</b> — die Grafik wird beschnitten und in wechselnden Größen gezeigt. Text nur der Name (+ ggf. eine Zeile).</td></tr>
+  <tr><td>Screenshots</td><td>je 1080×1920 o. ä., 9:16, 24-bit PNG</td><td>Geräteaufnahmen, siehe oben.</td></tr>
+</table>
+
+<h3>Markenlage „Mulplu“</h3>
+<div class="verdict"><b>Kein offensichtlicher Konflikt.</b> Websuche nach „Mulplu“ ergibt keinen Treffer — keine App, kein Produkt, keine Marke. Das Wort ist eine Prägung und damit kennzeichnungskräftig.
+<br><br><b>Nicht geprüft:</b> DPMA- und EUIPO-Register (beide nur interaktiv abfragbar). Für eine kostenlose Einzel-App ohne Markeneintragung ist das vertretbares Restrisiko — eine <i>eigene</i> Markenanmeldung ist ohnehin nicht Teil dieses Ziels.</div>
+
+<h3>Was hier offen bleibt (Fragen an dich)</h3>
+<ul class="tight">
+  <li><b>Richtung A, B oder C?</b> Empfehlung: B.</li>
+  <li><b>Entwicklername im Listing</b> — steht sichtbar über dem Titel und ist laut <a href="https://github.com/ewirch/mulplu/issues/40">#40</a> der Klarname. Gehört das zur Identitätsentscheidung in <a href="https://github.com/ewirch/mulplu/issues/45">#45</a> oder hierher?</li>
+  <li><b>Quelltext-Link im Listing</b> — GPLv3 §6(d) aus <a href="https://github.com/ewirch/mulplu/issues/43">#43</a>. Als „Website“-Feld des Listings, oder als Zeile am Ende der Beschreibung, oder beides? (Die Beschreibungen oben behaupten nur „öffentlich“, ohne URL.)</li>
+  <li><b>Erwähnt die Beschreibung „freie Software / GPL“ überhaupt?</b> Sie lädt damit auch zum Nachbauen ein. Weglassen ändert nichts an der Pflicht (die erfüllt der Link plus die In-App-Lizenz aus <a href="https://github.com/ewirch/mulplu/issues/51">#51</a>).</li>
+</ul>
+
+</div>
+
+<div class="bar">
+  <button data-v="a" class="on">A · Mulplu</button>
+  <button data-v="b">B · Mulplu – Einmaleins üben</button>
+  <button data-v="c">C · Einmaleins-Karte</button>
+</div>
+
+<script>
+// --- the progress-map staircase, straight out of ic_launcher_foreground.xml ---
+const TILES = [[0,0],[0,1],[1,1],[0,2],[1,2],[2,2]]; // [col,row]
+function staircase(scale, cx, cy, colour) {
+  // tile 14.5, gap 2.2, radius 21% — same proportions as the launcher icon
+  const t = 14.5 * scale, g = 2.2 * scale, r = t * 0.21;
+  const w = 3 * t + 2 * g;
+  const x0 = cx - w / 2, y0 = cy - w / 2;
+  return TILES.map(([c, r_] ) =>
+    `<rect x="${x0 + c * (t + g)}" y="${y0 + r_ * (t + g)}" width="${t}" height="${t}" rx="${r}" fill="${colour}"/>`
+  ).join('');
+}
+function icon(size) {
+  return `<svg viewBox="0 0 108 108" width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+    <rect width="108" height="108" fill="#3E6FE0"/>${staircase(1, 54, 51.7, '#fff')}</svg>`;
+}
+function feature(word, sub) {
+  return `<svg viewBox="0 0 1024 500" width="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1024" height="500" fill="#3E6FE0"/>
+    ${staircase(4.4, 250, 250, '#ffffff')}
+    <text x="470" y="${sub ? 238 : 268}" font-family="Roboto,Segoe UI,sans-serif" font-size="84" font-weight="700" fill="#fff">${word}</text>
+    ${sub ? `<text x="472" y="300" font-family="Roboto,Segoe UI,sans-serif" font-size="34" fill="#D8E4FB">${sub}</text>` : ''}
+  </svg>`;
+}
+for (const k of ['a', 'b', 'c']) document.getElementById('ic-' + k).innerHTML = icon(96);
+document.getElementById('fg-a').innerHTML = feature('Mulplu', null);
+document.getElementById('fg-b').innerHTML = feature('Mulplu', 'Einmaleins in kleinen Schritten');
+document.getElementById('fg-c').innerHTML = feature('Einmaleins', 'Karte');
+
+document.querySelectorAll('.bar button').forEach(b => b.onclick = () => {
+  const v = b.dataset.v;
+  document.querySelectorAll('.bar button').forEach(x => x.classList.toggle('on', x === b));
+  ['a', 'b', 'c'].forEach(k => document.getElementById('v-' + k).classList.toggle('hidden', k !== v));
+  history.replaceState(null, '', '?v=' + v);
+});
+const start = new URLSearchParams(location.search).get('v');
+if (start) document.querySelector(`.bar button[data-v="${start}"]`)?.click();
+</script>
+</body>
+</html>
