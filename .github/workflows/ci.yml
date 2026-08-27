@@ -18,5 +18,8 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # Debug variant only. `build` would pull in assembleRelease, and since #46
+      # packageRelease aborts without the signing key — which CI never gets,
+      # because releases are built and signed locally by hand (#55).
       - name: Build and run JVM tests
-        run: ./gradlew build
+        run: ./gradlew assembleDebug testDebugUnitTest lintDebug
