@@ -327,7 +327,7 @@ private fun FreeInputArea(
     }
     val fieldText = when {
         correctFb -> "$correct"
-        wrong && wrongStage == 1 -> entered.ifEmpty { (feedback as Feedback.Wrong).given.toString() }
+        wrong && wrongStage == 1 -> entered.ifEmpty { feedback.given.toString() }
         (wrong && wrongStage == 2) || reveal -> "$correct"
         else -> entered
     }

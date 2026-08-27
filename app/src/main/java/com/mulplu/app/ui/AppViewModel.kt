@@ -222,7 +222,7 @@ class AppViewModel(
                 rejectedTodayFor(item).add(given)
             }
             feedback = when {
-                correct -> Feedback.Correct(given!!)
+                correct -> Feedback.Correct(given)
                 given == null -> Feedback.Reveal
                 else -> Feedback.Wrong(given)
             }

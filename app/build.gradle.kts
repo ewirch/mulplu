@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
 }
@@ -66,12 +65,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
@@ -80,8 +82,12 @@ android {
 // fresh clone, where the keystore is absent by design.
 tasks.matching { it.name == "packageRelease" || it.name == "packageReleaseBundle" }
     .configureEach {
+        // Read at configuration time: the doFirst below must capture a plain
+        // Boolean, not the build script, or the configuration cache cannot
+        // serialize the task.
+        val signable = releaseSignable
         doFirst {
-            check(releaseSignable) {
+            check(signable) {
                 "Cannot sign the release: needs app/release.keystore plus " +
                     "MULPLU_STORE_PASSWORD and MULPLU_KEY_PASSWORD in the environment."
             }

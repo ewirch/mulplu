@@ -164,7 +164,7 @@ class SimulationOracleTest {
                 asked++
                 lastShown = q.item
                 val given = if (q.optionCount != null) {
-                    Engine.buildChoices(q.item.a, q.item.b, q.optionCount!!, emptySet(), rng)
+                    Engine.buildChoices(q.item.a, q.item.b, q.optionCount, emptySet(), rng)
                         .random(rng)
                 } else {
                     rng.nextInt(4, 82) // blind free-input guess
