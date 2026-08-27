@@ -1,11 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+      allowBackup="false" is load-bearing for the Play Data safety declaration
+      "no data collected" (#42, #53): app_state.json must never leave the
+      device. Do not set it back to true. The rules file covers API 31+, where
+      allowBackup alone does not reliably stop device-to-device transfer.
+      Lint's suggestion to add fullBackupContent is moot: allowBackup="false"
+      already closes API 28-30 entirely, so a second rules file would bind
+      nothing.
+    -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
+        tools:ignore="DataExtractionRules"
         android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".ui.MainActivity"
