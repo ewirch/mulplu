@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Play store icon (#54). The adaptive launcher icon (#49) cropped to the 72dp
+  square the launcher actually shows out of its 108dp canvas, so the store and
+  the device show one image. Tile geometry is copied verbatim from
+  app/src/main/res/drawable/ic_launcher_foreground.xml: tile 14.5, gap 2.2,
+  corner radius 21% of the tile.
+
+  Full square, no rounding, no shadow — Play masks it itself (30% radius).
+  The motif spans 47.9 of 72 = 341px at 512, inside Google's 384px keyline.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="18 18 72 72" width="512" height="512">
+  <rect x="18" y="18" width="72" height="72" fill="#3E6FE0"/>
+  <g fill="#FFFFFF">
+    <rect x="30"   y="30"   width="14.5" height="14.5" rx="3.045"/>
+    <rect x="30"   y="46.7" width="14.5" height="14.5" rx="3.045"/>
+    <rect x="46.7" y="46.7" width="14.5" height="14.5" rx="3.045"/>
+    <rect x="30"   y="63.4" width="14.5" height="14.5" rx="3.045"/>
+    <rect x="46.7" y="63.4" width="14.5" height="14.5" rx="3.045"/>
+    <rect x="63.4" y="63.4" width="14.5" height="14.5" rx="3.045"/>
+  </g>
+</svg>
