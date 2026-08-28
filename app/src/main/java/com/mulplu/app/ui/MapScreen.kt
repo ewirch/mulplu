@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -42,6 +43,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -55,6 +57,13 @@ private object MapColors {
     val ArrowOrange = Color(0xFFF5A623)
     val GhostBorder = Color(0xFFCFDBE6)
     val Muted = Color(0xFF5B6B7C)
+
+    /**
+     * The legal footer (#51). Dimmer than [Muted] but deliberately not as dim
+     * as [GhostBorder]: at 3.1:1 against the background it stays readable, and
+     * an Impressum nobody can read is the risk the footer exists to close.
+     */
+    val FooterGrey = Color(0xFF8492A0)
     val RosetteLight = Color(0xFFFFE9A8)
     val RosetteDark = Color(0xFFE2B23C)
     val TerminalScrim = Color(0xF2FFFDF6)
@@ -78,6 +87,7 @@ fun MapScreen(
     terminalTick: Long,
     onStart: () -> Unit,
     onPlayDayClose: () -> Unit,
+    onOpenLegal: () -> Unit,
 ) {
     val tiles = tileStates(state)
     val promoted = promotedToday(state, today).toSet()
@@ -133,7 +143,6 @@ fun MapScreen(
                     text = "Für heute fertig",
                     fontSize = 18.sp,
                     color = MapColors.Muted,
-                    modifier = Modifier.padding(bottom = 28.dp),
                 )
             } else {
                 Button(
@@ -147,8 +156,20 @@ fun MapScreen(
                 ) {
                     Text(text = "Los geht's", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                 }
-                Spacer(Modifier.height(20.dp))
             }
+            // Impressum and privacy have to be findable from the home surface
+            // (#51). Three words, one tap target — the whole line opens the
+            // legal screen; there are no anchors to jump to.
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Impressum · Datenschutz · Lizenz",
+                fontSize = 11.sp,
+                color = MapColors.FooterGrey,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onOpenLegal),
+            )
         }
         TerminalOverlay(phase = terminalPhase)
     }
