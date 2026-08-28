@@ -109,6 +109,16 @@ private fun AppContent(vm: AppViewModel, appState: AppState, soundPlayer: SoundP
                 QuestionScreen(ui = ui, feedback = vm.feedback, onAnswer = vm::answer)
             }
         }
+        Screen.Legal -> {
+            BackHandler { vm.backToMap() }
+            LegalScreen(onBack = vm::backToMap, onShowLicense = vm::openLicense)
+        }
+        // Back lands on Legal, not the map — the licence text must not be a
+        // second dead end (#51).
+        Screen.License -> {
+            BackHandler { vm.openLegal() }
+            LicenseScreen(onBack = vm::openLegal)
+        }
         else -> {
             val today = AppClock.todayAsState()
             MapScreen(
@@ -119,6 +129,7 @@ private fun AppContent(vm: AppViewModel, appState: AppState, soundPlayer: SoundP
                 terminalTick = vm.terminalTick,
                 onStart = vm::startPractice,
                 onPlayDayClose = soundPlayer::playDayClose,
+                onOpenLegal = vm::openLegal,
             )
         }
     }

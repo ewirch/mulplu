@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-/** The three screens (ADR-0003: a 3-case sealed class, no Navigation-Compose). */
+/** The screens (ADR-0003: a small sealed class, no Navigation-Compose). */
 sealed interface Screen {
     /** Home: the progress map. */
     data object Map : Screen
@@ -31,6 +31,12 @@ sealed interface Screen {
     data object Calibration : Screen
 
     data object Question : Screen
+
+    /** Impressum, privacy, licence, version — reached from the map's footer (#51). */
+    data object Legal : Screen
+
+    /** The GPL text, one level below [Legal] (#51). */
+    data object License : Screen
 }
 
 /** What the question screen shows for one presentation. */
@@ -105,6 +111,14 @@ class AppViewModel(
     /** Backgrounding: an open question evaporates, return lands on the map (mvp-spec §10). */
     fun onBackgrounded() {
         if (screen == Screen.Question) backToMap()
+    }
+
+    fun openLegal() {
+        screen = Screen.Legal
+    }
+
+    fun openLicense() {
+        screen = Screen.License
     }
 
     fun backToMap() {
