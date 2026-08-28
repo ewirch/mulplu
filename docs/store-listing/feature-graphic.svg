@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Play feature graphic, 1024x500 (#54, spec from #48): blue field, the
+  progress-map staircase, the wordmark and one subtitle line. No screenshot
+  inside — Play crops this asset at varying sizes, so the whole composition
+  sits well inside the middle of the canvas.
+
+  Tile geometry as in icon-512.svg, scaled 4x. Text is Roboto — the platform
+  face the app itself renders in; see README.md for how it is supplied.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+  <rect width="1024" height="500" fill="#3E6FE0"/>
+
+  <!-- staircase: tile 58, gap 8.8, radius 12.18 — block 191.6 wide, left edge 165 -->
+  <g fill="#FFFFFF">
+    <rect x="165"   y="154.2" width="58" height="58" rx="12.18"/>
+    <rect x="165"   y="221"   width="58" height="58" rx="12.18"/>
+    <rect x="231.8" y="221"   width="58" height="58" rx="12.18"/>
+    <rect x="165"   y="287.8" width="58" height="58" rx="12.18"/>
+    <rect x="231.8" y="287.8" width="58" height="58" rx="12.18"/>
+    <rect x="298.6" y="287.8" width="58" height="58" rx="12.18"/>
+  </g>
+
+  <text x="417" y="238" font-family="Roboto" font-size="84" font-weight="700"
+        fill="#FFFFFF">Mulplu</text>
+  <text x="420" y="300" font-family="Roboto" font-size="32"
+        fill="#D8E4FB">Einmaleins in kleinen Schritten</text>
+</svg>
