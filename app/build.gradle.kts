@@ -1,3 +1,7 @@
+// `java` in a build script resolves to the Java extension, not the package, so
+// java.util.Properties has to be imported rather than spelled out.
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -17,6 +21,24 @@ val releaseKeyPassword: String? = System.getenv("MULPLU_KEY_PASSWORD")
 val releaseSignable =
     releaseKeystore.exists() && releaseStorePassword != null && releaseKeyPassword != null
 
+// The version lives in version.properties at the repo root, not here (#59): the
+// `releaseVersion` task bumps it mechanically, and a task that rewrites a Kotlin
+// build script by regex is a diff nobody would trust two years later.
+// providers.fileContents (not File.readText) so the configuration cache notices
+// a bump instead of serving a stale versionName.
+val versionProperties =
+    Properties().apply {
+        load(
+            providers
+                .fileContents(rootProject.layout.projectDirectory.file("version.properties"))
+                .asText
+                .get()
+                .reader(),
+        )
+    }
+val appVersionCode = versionProperties.getProperty("versionCode").toInt()
+val appVersionName = versionProperties.getProperty("versionName")
+
 android {
     namespace = "com.mulplu.app"
     compileSdk = 35
@@ -26,10 +48,10 @@ android {
         minSdk = 28
         targetSdk = 35
         // Monotone across *all* channels — every artefact that leaves this
-        // machine takes the next code, sideload or Play. These are the next
-        // free numbers, not the last shipped ones. Tag v<versionName> on ship.
-        versionCode = 2
-        versionName = "1.0"
+        // machine takes the next code, sideload or Play. Set by `releaseVersion`
+        // (#59), which also creates the tag the guard below insists on.
+        versionCode = appVersionCode
+        versionName = appVersionName
     }
 
     signingConfigs {
@@ -77,19 +99,51 @@ kotlin {
     }
 }
 
-// Abort before an unsigned APK or AAB exists. Attached to the packaging tasks
-// rather than the whole build so that `test` and debug builds still work on a
-// fresh clone, where the keystore is absent by design.
+// Abort before an unsigned or unattributable APK or AAB exists. Attached to the
+// packaging tasks rather than the whole build so that `test` and debug builds
+// still work on a fresh clone, where the keystore is absent by design.
 tasks.matching { it.name == "packageRelease" || it.name == "packageReleaseBundle" }
     .configureEach {
-        // Read at configuration time: the doFirst below must capture a plain
-        // Boolean, not the build script, or the configuration cache cannot
+        // Read at configuration time: the doFirst below must capture plain
+        // values, not the build script, or the configuration cache cannot
         // serialize the task.
         val signable = releaseSignable
+        val repoDir = rootProject.rootDir
+        val expectedTag = "v$appVersionName"
         doFirst {
             check(signable) {
                 "Cannot sign the release: needs app/release.keystore plus " +
                     "MULPLU_STORE_PASSWORD and MULPLU_KEY_PASSWORD in the environment."
+            }
+
+            // LegalScreen prints github.com/ewirch/mulplu/releases/tag/v<versionName>
+            // as the GPLv3 § 6(d) source offer, and that binary outlives every
+            // intention we have about it. So the check is not "a tag exists" but
+            // the obligation itself: what is packaged here is exactly what that
+            // tag serves. Deliberately offline — pushing is `releaseVersion`'s
+            // job (#59); this only verifies nothing moved since.
+            fun run(vararg args: String): Pair<Int, String> {
+                val process = ProcessBuilder(listOf("git", *args))
+                    .directory(repoDir)
+                    .redirectErrorStream(true)
+                    .start()
+                val output = process.inputStream.bufferedReader().readText().trim()
+                return process.waitFor() to output
+            }
+
+            val (tagCode, taggedCommit) = run("rev-list", "--max-count=1", expectedTag)
+            check(tagCode == 0) {
+                "No tag $expectedTag — run `./gradlew releaseVersion` before packaging, " +
+                    "or the shipped app's source link is a 404."
+            }
+            val head = run("rev-parse", "HEAD").second
+            check(taggedCommit == head) {
+                "Tag $expectedTag points at $taggedCommit but HEAD is $head — " +
+                    "the packaged code is not the code that tag serves."
+            }
+            check(run("status", "--porcelain").second.isEmpty()) {
+                "Working tree is not clean — the packaged code is not the code " +
+                    "tag $expectedTag serves."
             }
         }
     }
