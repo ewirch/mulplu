@@ -41,12 +41,17 @@ val appVersionName = versionProperties.getProperty("versionName")
 
 android {
     namespace = "com.mulplu.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.mulplu.app"
         minSdk = 28
-        targetSdk = 35
+        // Play's upload floor, not a preference (#66): since 31.08.2026 a new
+        // app or an update must target 36 to be accepted at all. The extension
+        // to 01.11.2026 covers only already-published apps with a Console
+        // policy warning, so it was never available to us. Raising this is the
+        // only lever — do not lower it.
+        targetSdk = 36
         // Monotone across *all* channels — every artefact that leaves this
         // machine takes the next code, sideload or Play. Set by `releaseVersion`
         // (#59), which also creates the tag the guard below insists on.
