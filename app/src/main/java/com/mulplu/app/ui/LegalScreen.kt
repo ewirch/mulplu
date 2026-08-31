@@ -36,9 +36,11 @@ private object LegalColors {
  * order. Reached from the map's footer line; the GPL text itself sits one
  * level below on [LicenseScreen].
  *
- * The texts are hardcoded German like every other string in this app. They are
- * word-for-word identical to the hosted privacy page Play requires, so the two
- * must be edited together.
+ * The Impressum and privacy prose are not string literals here: they live in
+ * `res/raw` and are the same bytes the hosted page Play requires serves (#58),
+ * so the two cannot drift. `LegalPageSyncTest` holds them equal. The licence
+ * block and the version line stay code-side — both name a version, and the
+ * hosted page is one document for all of them.
  */
 @Composable
 fun LegalScreen(onBack: () -> Unit, onShowLicense: () -> Unit) {
@@ -59,12 +61,12 @@ fun LegalScreen(onBack: () -> Unit, onShowLicense: () -> Unit) {
         // any kind, contact from an authority, or use beyond the family device.
         // The norm is deliberately not cited above: quoting it while leaving
         // out the address it demands would only make the gap explicit.
-        Heading("Impressum")
-        Body("Eduard Wirch\nmulplu@proton.me")
+        Heading(HEADING_IMPRESSUM)
+        Body(rawText(R.raw.impressum))
         Spacer(Modifier.height(28.dp))
 
-        Heading("Datenschutz")
-        Body(PRIVACY_TEXT)
+        Heading(HEADING_PRIVACY)
+        Body(rawText(R.raw.privacy))
         Spacer(Modifier.height(28.dp))
 
         Heading("Lizenz")
@@ -176,17 +178,23 @@ private fun Body(text: String) {
  */
 private val SOURCE_URL = "github.com/ewirch/mulplu/releases/tag/v${BuildConfig.VERSION_NAME}"
 
-private const val PRIVACY_TEXT =
-    """Mulplu erhebt keine Daten.
+/**
+ * The two headings, as constants so `LegalPageSyncTest` can assert the hosted
+ * page carries these words and not others. They are UI structure rather than
+ * legal text, which is why they are not part of the shared `res/raw` files.
+ */
+internal const val HEADING_IMPRESSUM = "Impressum"
+internal const val HEADING_PRIVACY = "Datenschutz"
 
-Die App besitzt keine Berechtigung, auf das Internet zuzugreifen. Sie überträgt nichts. Sie enthält keine Werbung, keine Analyse- oder Tracking-Dienste und keine Programmbausteine von Drittanbietern. Es gibt kein Benutzerkonto und keine Anmeldung.
-
-Der Lernfortschritt – welche Aufgaben geübt wurden und wie sicher sie sitzen – wird ausschließlich auf diesem Gerät gespeichert, im privaten Speicherbereich der App. Er enthält keinen Namen, kein Alter und keine Gerätekennung. Er wird weder an den Anbieter noch an Dritte übermittelt und ist von der Datensicherung des Geräts ausgenommen.
-
-Die App richtet sich an Kinder. Auch deshalb ist sie so gebaut, dass gar nicht erst Daten entstehen, die geschützt werden müssten.
-
-Wer die App deinstalliert, löscht damit den gesamten Lernfortschritt. Einen anderen Weg, ihn zu sichern oder zu übertragen, gibt es nicht.
-
-Fragen zum Datenschutz: mulplu@proton.me
-
-Stand: August 2026"""
+/**
+ * A `res/raw` text asset, trimmed. The trailing newline every text file carries
+ * is not part of the document, and rendering it would add a blank line the
+ * hosted page does not have.
+ */
+@Composable
+private fun rawText(resId: Int): String {
+    val context = LocalContext.current
+    return remember(resId) {
+        context.resources.openRawResource(resId).bufferedReader().use { it.readText() }.trim()
+    }
+}
