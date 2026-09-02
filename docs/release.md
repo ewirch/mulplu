@@ -52,8 +52,9 @@ Release object is needed and none is created.
 6. **Test the APK on the child device** before uploading — `app/build/outputs/apk/release/`, via the
    MTP route from #44 (`adb` cannot write into the supervised user). This is what `assembleRelease`
    exists for.
-7. **Upload the AAB** from `app/build/outputs/bundle/release/` to the Play Console, and check that
-   the listing's website field points at the new tag.
+7. **Upload the AAB** from `app/build/outputs/bundle/release/` to the Play Console. Nothing in the
+   store listing tracks the version: the listing's website field is deliberately empty (#71), so the
+   § 6(d) source offer rides on the licence screen inside the build and nowhere else.
 
 ## One-time step before the first Play rollout
 
